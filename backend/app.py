@@ -306,7 +306,7 @@ def generate_documents_stream(request: GenerateRequest):
             yield json.dumps(error_event, ensure_ascii=False) + "\n"
 
     def event_stream():
-        """Streaming mode for GPT models."""
+        """Streaming mode for GPT models with heartbeat to prevent connection timeout."""
         try:
             meta_event = {
                 "type": "meta",
@@ -316,71 +316,118 @@ def generate_documents_stream(request: GenerateRequest):
             }
             yield json.dumps(meta_event, ensure_ascii=False) + "\n"
 
-            completion = client.chat.completions.create(
-                model=model_name,
-                messages=[{"role": "user", "content": full_prompt}],
-                max_tokens=32000,
-                temperature=1.0,
-                stream=True,
-            )
+            # Use a queue and thread to enable heartbeat during slow API response
+            chunk_queue = queue.Queue()
+            api_error = {"error": None}
+
+            def stream_api_call():
+                """Background thread to stream chunks from API."""
+                try:
+                    completion = client.chat.completions.create(
+                        model=model_name,
+                        messages=[{"role": "user", "content": full_prompt}],
+                        max_tokens=32000,
+                        temperature=1.0,
+                        stream=True,
+                    )
+                    for chunk in completion:
+                        chunk_queue.put(("chunk", chunk))
+                    chunk_queue.put(("done", None))
+                except Exception as e:
+                    api_error["error"] = str(e)
+                    chunk_queue.put(("error", str(e)))
+
+            # Start API call in background thread
+            api_thread = threading.Thread(target=stream_api_call, daemon=True)
+            api_thread.start()
 
             buffer = ""
             current_doc_index = None
             max_sep_len = max(len(s) for s in DOCUMENT_SEPARATORS)
+            last_chunk_time = time.time()
+            heartbeat_interval = 10  # Send heartbeat every 10 seconds of no data
+            total_elapsed = 0
+            max_wait = 300  # 5 minutes max total wait
 
-            for chunk in completion:
-                choice = chunk.choices[0]
-                if not hasattr(choice, "delta") or choice.delta is None:
-                    continue
-                delta_text = choice.delta.content
-                if not delta_text:
-                    continue
+            while True:
+                try:
+                    # Try to get next chunk with timeout
+                    msg_type, msg_data = chunk_queue.get(timeout=heartbeat_interval)
+                    last_chunk_time = time.time()
 
-                buffer += delta_text
+                    if msg_type == "error":
+                        raise Exception(msg_data)
+                    elif msg_type == "done":
+                        break  # Exit main loop, proceed to flush remaining
 
-                while True:
-                    if current_doc_index is None:
-                        first_sep = DOCUMENT_SEPARATORS[0]
-                        sep_idx = buffer.find(first_sep)
-                        if sep_idx == -1:
-                            if len(buffer) > 4000:
-                                current_doc_index = 0
-                                yield emit_doc_started(current_doc_index)
-                                safe_len = max(0, len(buffer) - (max_sep_len - 1))
-                                if safe_len:
-                                    text_to_send = buffer[:safe_len]
-                                    buffer = buffer[safe_len:]
+                    # Process the chunk
+                    chunk = msg_data
+                    choice = chunk.choices[0]
+                    if not hasattr(choice, "delta") or choice.delta is None:
+                        continue
+                    delta_text = choice.delta.content
+                    if not delta_text:
+                        continue
+
+                    buffer += delta_text
+
+                    # Parse and emit document chunks
+                    while True:
+                        if current_doc_index is None:
+                            first_sep = DOCUMENT_SEPARATORS[0]
+                            sep_idx = buffer.find(first_sep)
+                            if sep_idx == -1:
+                                if len(buffer) > 4000:
+                                    current_doc_index = 0
+                                    yield emit_doc_started(current_doc_index)
+                                    safe_len = max(0, len(buffer) - (max_sep_len - 1))
+                                    if safe_len:
+                                        text_to_send = buffer[:safe_len]
+                                        buffer = buffer[safe_len:]
+                                        yield emit_chunk(current_doc_index, text_to_send)
+                                break
+
+                            buffer = buffer[sep_idx + len(first_sep):]
+                            current_doc_index = 0
+                            yield emit_doc_started(current_doc_index)
+                            continue
+
+                        next_index = current_doc_index + 1
+                        next_sep_idx = -1
+                        if next_index < len(DOCUMENT_SEPARATORS):
+                            next_sep = DOCUMENT_SEPARATORS[next_index]
+                            next_sep_idx = buffer.find(next_sep)
+
+                        if next_sep_idx == -1:
+                            safe_len = len(buffer) - (max_sep_len - 1)
+                            if safe_len > 0:
+                                text_to_send = buffer[:safe_len]
+                                buffer = buffer[safe_len:]
+                                if text_to_send:
                                     yield emit_chunk(current_doc_index, text_to_send)
                             break
 
-                        buffer = buffer[sep_idx + len(first_sep):]
-                        current_doc_index = 0
+                        content = buffer[:next_sep_idx]
+                        if content:
+                            yield emit_chunk(current_doc_index, content)
+                        yield emit_doc_complete(current_doc_index)
+
+                        buffer = buffer[next_sep_idx + len(DOCUMENT_SEPARATORS[next_index]):]
+                        current_doc_index = next_index
                         yield emit_doc_started(current_doc_index)
-                        continue
 
-                    next_index = current_doc_index + 1
-                    next_sep_idx = -1
-                    if next_index < len(DOCUMENT_SEPARATORS):
-                        next_sep = DOCUMENT_SEPARATORS[next_index]
-                        next_sep_idx = buffer.find(next_sep)
-
-                    if next_sep_idx == -1:
-                        safe_len = len(buffer) - (max_sep_len - 1)
-                        if safe_len > 0:
-                            text_to_send = buffer[:safe_len]
-                            buffer = buffer[safe_len:]
-                            if text_to_send:
-                                yield emit_chunk(current_doc_index, text_to_send)
-                        break
-
-                    content = buffer[:next_sep_idx]
-                    if content:
-                        yield emit_chunk(current_doc_index, content)
-                    yield emit_doc_complete(current_doc_index)
-
-                    buffer = buffer[next_sep_idx + len(DOCUMENT_SEPARATORS[next_index]):]
-                    current_doc_index = next_index
-                    yield emit_doc_started(current_doc_index)
+                except queue.Empty:
+                    # No chunk received within heartbeat_interval, send heartbeat
+                    total_elapsed += heartbeat_interval
+                    if total_elapsed >= max_wait:
+                        raise Exception("GPT API 响应超时，请稍后重试")
+                    heartbeat_event = {
+                        "type": "heartbeat",
+                        "elapsed_seconds": total_elapsed,
+                        "message": "GPT 正在思考中，请稍候..."
+                    }
+                    yield json.dumps(heartbeat_event, ensure_ascii=False) + "\n"
+                    continue
 
             # Stream finished; flush remaining
             if current_doc_index is None:
