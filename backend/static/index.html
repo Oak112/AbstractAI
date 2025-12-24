@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Context Compiler - 上下文编译器</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+	    <div class="app-container">
+	        <!-- Header -->
+	        <header class="header">
+	            <div class="logo">
+	                <i class="fas fa-layer-group"></i>
+	                <span>Context Compiler</span>
+	            </div>
+	            <div class="header-subtitle">将长对话内容转化为清晰完整的产品开发说明文档</div>
+	        </header>
+
+	        <!-- Hero Section: Left content + Right input card -->
+	        <section class="hero-split">
+	            <!-- Left: Value Proposition -->
+	            <div class="hero-content">
+	                <h1 class="hero-title">把一段对话，变成工程师能直接开干的 11 份规格文档</h1>
+	                <p class="hero-description">
+	                    粘贴聊天记录 / 会议录音 / 任意文本或上传文件。AI 自动提炼决策与约束，输出结构化文档，并支持逐份下载与一键打包。
+	                </p>
+
+	                <!-- 3 Key Benefits -->
+	                <ul class="hero-benefits">
+	                    <li>
+	                        <i class="fas fa-check-circle"></i>
+	                        <span>不丢关键决策：目标、范围、约束、边界、风险全覆盖</span>
+	                    </li>
+	                    <li>
+	                        <i class="fas fa-check-circle"></i>
+	                        <span>对人和 AI 都友好：可直接交给 Cursor / 编程 AI 生成实现方案</span>
+	                    </li>
+	                    <li>
+	                        <i class="fas fa-check-circle"></i>
+	                        <span>11 份文档按顺序点亮，可实时预览、下载</span>
+	                    </li>
+	                </ul>
+
+	                <!-- 3-Step Process (Minimal) -->
+	                <div class="hero-steps">
+	                    <div class="step-item">
+	                        <div class="step-number">1</div>
+	                        <div class="step-text">粘贴或上传原始内容</div>
+	                    </div>
+	                    <div class="step-arrow">→</div>
+	                    <div class="step-item">
+	                        <div class="step-number">2</div>
+	                        <div class="step-text">选择模型，点击生成</div>
+	                    </div>
+	                    <div class="step-arrow">→</div>
+	                    <div class="step-item">
+	                        <div class="step-number">3</div>
+	                        <div class="step-text">逐份预览/下载</div>
+	                    </div>
+	                </div>
+	            </div>
+
+	            <!-- Right: Input Card (Glass morphism) -->
+	            <div class="hero-input-card" id="heroInputCard">
+	                <div class="input-card-header">
+	                    <h3>开始生成</h3>
+	                    <p>粘贴内容或上传文件</p>
+	                </div>
+
+	                <div class="input-card-body">
+	                    <!-- Project Name -->
+	                    <div class="form-group">
+	                        <label for="projectName">项目名称</label>
+	                        <input type="text" id="projectName" placeholder="输入项目名称..." value="未命名项目">
+	                    </div>
+
+	                    <!-- Text Input -->
+	                    <div class="form-group">
+	                        <label for="contextInput">对话内容</label>
+	                        <textarea id="contextInput" placeholder="把你的长对话/会议记录粘贴到这里（任意长度都可以）..."></textarea>
+	                        <div class="char-count">
+	                            <span id="charCount">0</span> 字符
+	                        </div>
+	                    </div>
+
+	                    <!-- File Upload -->
+	                    <div class="form-group">
+	                        <label>或上传文件</label>
+	                        <label for="fileInput" class="file-upload-btn">
+	                            <i class="fas fa-upload"></i>
+	                            <span>选择文件</span>
+	                        </label>
+	                        <input type="file" id="fileInput" accept=".txt,.md,.doc,.docx" hidden>
+	                        <span id="fileName" class="file-name"></span>
+	                    </div>
+
+	                    <!-- Model Selection -->
+	                    <div class="form-group">
+	                        <label>使用模型</label>
+	                        <div class="model-toggle-group">
+	                            <button type="button" class="model-toggle active" data-model="gpt-5">
+	                                <span class="model-name">GPT-5</span>
+	                                <span class="model-hint">理解力更强</span>
+	                            </button>
+	                            <button type="button" class="model-toggle" data-model="gemini-2.5-pro">
+	                                <span class="model-name">Gemini 2.5 Pro</span>
+	                                <span class="model-hint">响应更快</span>
+	                            </button>
+	                        </div>
+	                    </div>
+
+	                    <!-- CTA Button -->
+	                    <button class="generate-btn" id="generateBtn" onclick="generateDocuments()">
+	                        <i class="fas fa-magic"></i>
+	                        <span>开始生成</span>
+	                    </button>
+
+	                    <!-- Time Estimate -->
+	                    <p class="time-estimate">通常 1–5 分钟，取决于文本长度与模型</p>
+	                </div>
+	            </div>
+	        </section>
+
+	        <!-- Main Content -->
+	        <main class="main-content">
+            <!-- Loading Section (hidden by default) -->
+            <section class="loading-section" id="loadingSection" style="display: none;">
+                <div class="loading-content">
+                    <div class="loading-spinner"></div>
+                    <h3>正在编译文档...</h3>
+                    <p>AI 正在分析您的上下文并生成 11 份规格文档</p>
+	                    <p class="loading-tip">通常 1–5 分钟，取决于文本长度与模型</p>
+                </div>
+            </section>
+
+	            <!-- Results Section -->
+	            <section class="results-section" id="resultsSection" style="display: none;">
+	                <div class="section-header">
+	                    <h2><i class="fas fa-file-alt"></i> 生成的文档</h2>
+	                    <div class="results-actions">
+                        <button class="action-btn" onclick="downloadAll()">
+                            <i class="fas fa-download"></i> 下载全部
+                        </button>
+	                        <button class="action-btn secondary" onclick="resetForm()">
+	                            <i class="fas fa-redo"></i> 重新开始
+	                        </button>
+	                    </div>
+	                    <div class="results-meta">
+	                        <p id="generationStatus" class="generation-status">准备生成 11 份文档</p>
+	                        <div class="generation-progress">
+	                            <div class="generation-progress-bar">
+	                                <div id="generationProgressFill" class="generation-progress-fill"></div>
+	                            </div>
+	                            <span id="generationProgressText" class="generation-progress-text"></span>
+	                        </div>
+	                    </div>
+	                </div>
+	                
+	                <div class="documents-grid" id="documentsGrid"></div>
+            </section>
+        </main>
+
+        <!-- Document Modal -->
+        <div class="modal" id="documentModal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3 id="modalTitle"></h3>
+                    <div class="modal-actions">
+                        <button class="modal-btn" onclick="copyDocument()">
+                            <i class="fas fa-copy"></i> 复制
+                        </button>
+                        <button class="modal-btn" onclick="downloadDocument()">
+                            <i class="fas fa-download"></i> 下载
+                        </button>
+                        <button class="modal-close" onclick="closeModal()">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="modal-body">
+                    <pre id="modalContent"></pre>
+                </div>
+            </div>
+        </div>
+
+        <!-- Toast Notification -->
+        <div class="toast" id="toast"></div>
+    </div>
+
+    <script src="/static/app.js"></script>
+</body>
+</html>
+
