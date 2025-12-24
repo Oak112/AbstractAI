@@ -5,6 +5,9 @@ import re
 import json
 import zipfile
 import io
+import time
+import threading
+import queue
 from datetime import datetime
 from typing import Optional
 from pathlib import Path
@@ -214,8 +217,29 @@ def generate_documents_stream(request: GenerateRequest):
         return json.dumps({"type": "doc_complete", "doc_index": idx}, ensure_ascii=False) + "\n"
 
     def event_stream_gemini():
-        """Non-streaming mode for Gemini (emulate streaming events from full response)."""
+        """Non-streaming mode for Gemini with heartbeat to prevent connection timeout.
+
+        Uses a background thread for the API call while the main generator
+        sends heartbeat events every 5 seconds to keep the connection alive.
+        """
+        result_queue = queue.Queue()
+
+        def api_call_thread():
+            """Background thread to make the API call."""
+            try:
+                response = client.chat.completions.create(
+                    model=model_name,
+                    messages=[{"role": "user", "content": full_prompt}],
+                    max_tokens=32000,
+                    temperature=1.0,
+                )
+                raw_text = response.choices[0].message.content or ""
+                result_queue.put(("success", raw_text))
+            except Exception as e:
+                result_queue.put(("error", str(e)))
+
         try:
+            # Send initial metadata
             meta_event = {
                 "type": "meta",
                 "project_name": project_name,
@@ -224,14 +248,45 @@ def generate_documents_stream(request: GenerateRequest):
             }
             yield json.dumps(meta_event, ensure_ascii=False) + "\n"
 
-            # Non-streaming call
-            response = client.chat.completions.create(
-                model=model_name,
-                messages=[{"role": "user", "content": full_prompt}],
-                max_tokens=32000,
-                temperature=1.0,
-            )
-            raw_text = response.choices[0].message.content or ""
+            # Start API call in background thread
+            thread = threading.Thread(target=api_call_thread, daemon=True)
+            thread.start()
+
+            # Send heartbeats while waiting for API response
+            heartbeat_interval = 5  # seconds
+            max_wait_time = 180  # 3 minutes max
+            elapsed = 0
+
+            while thread.is_alive() and elapsed < max_wait_time:
+                try:
+                    # Check if result is ready (non-blocking with short timeout)
+                    result = result_queue.get(timeout=heartbeat_interval)
+                    break  # Got result, exit loop
+                except queue.Empty:
+                    # No result yet, send heartbeat to keep connection alive
+                    heartbeat_event = {
+                        "type": "heartbeat",
+                        "elapsed_seconds": elapsed + heartbeat_interval,
+                        "message": "Gemini 正在思考中，请稍候..."
+                    }
+                    yield json.dumps(heartbeat_event, ensure_ascii=False) + "\n"
+                    elapsed += heartbeat_interval
+            else:
+                # Loop ended without break - either timeout or thread died
+                if elapsed >= max_wait_time:
+                    raise Exception("Gemini API 响应超时，请稍后重试")
+                # Try to get result one more time
+                try:
+                    result = result_queue.get(timeout=1)
+                except queue.Empty:
+                    raise Exception("Gemini API 调用失败")
+
+            # Process result
+            status, data = result
+            if status == "error":
+                raise Exception(data)
+
+            raw_text = data
 
             # Parse documents from raw response
             documents = parse_documents(raw_text)

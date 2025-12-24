@@ -240,6 +240,13 @@ function handleStreamEvent(event) {
 	            showToast(event.message || '生成失败', 'error');
 	            break;
 	        }
+	        case 'heartbeat': {
+	            // Keep-alive event from Gemini non-streaming mode
+	            const msg = event.message || `等待中... (${event.elapsed_seconds || 0}秒)`;
+	            generationStatusEl.textContent = msg;
+	            console.debug('Heartbeat:', event);
+	            break;
+	        }
 	        default:
 	            console.debug('Unknown stream event', event);
 	    }
