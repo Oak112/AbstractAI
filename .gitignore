@@ -12,4 +12,6 @@ build/
 .venv/
 venv/
 env/
-
+context_compiler_output/
+context_compiler_output.zip
+docs/
