@@ -17,6 +17,11 @@ let isStreaming = false;
 // Model selection (gpt-5 / gemini-2.5-pro)
 let selectedModel = 'gpt-5';
 
+// Throttle rendering to reduce jitter (render at most every 100ms)
+let renderPending = false;
+let lastRenderTime = 0;
+const RENDER_THROTTLE_MS = 100;
+
     // DOM Elements
     const contextInput = document.getElementById('contextInput');
     const charCount = document.getElementById('charCount');
@@ -209,7 +214,8 @@ function handleStreamEvent(event) {
 	                    modalContent.textContent += delta;
 	                    modalContent.scrollTop = modalContent.scrollHeight;
 	                }
-	                renderStreamDocuments();
+	                // Throttle card updates to reduce jitter
+	                throttledRenderDocuments();
 	            }
 	            break;
 	        }
@@ -250,73 +256,145 @@ function updateGenerationProgress() {
 	    generationProgressText.textContent = `${docsCompleted} / ${totalDocsExpected}`;
 }
 
+// Throttled version for chunk updates
+function throttledRenderDocuments() {
+    const now = Date.now();
+    if (now - lastRenderTime < RENDER_THROTTLE_MS) {
+        if (!renderPending) {
+            renderPending = true;
+            setTimeout(() => {
+                renderPending = false;
+                lastRenderTime = Date.now();
+                renderStreamDocuments();
+            }, RENDER_THROTTLE_MS - (now - lastRenderTime));
+        }
+        return;
+    }
+    lastRenderTime = now;
+    renderStreamDocuments();
+}
+
 // Render streaming documents grid using current docStates
+// Optimized: create card structure once, then only update changed parts
 function renderStreamDocuments() {
-	    if (!docStates.length) return;
+    if (!docStates.length) return;
 
-	    docStates.forEach((doc, index) => {
-	        const prefix = doc.name.substring(0, 2);
-	        const icon = DOCUMENT_ICONS[prefix] || 'fa-file-alt';
-	        const previewSource = doc.content || '';
-	        const preview = previewSource.substring(0, 150).replace(/[#\n]/g, ' ').trim();
-	        const sizeKb = previewSource ? (previewSource.length / 1024).toFixed(1) : null;
+    docStates.forEach((doc, index) => {
+        const prefix = doc.name.substring(0, 2);
+        const icon = DOCUMENT_ICONS[prefix] || 'fa-file-alt';
+        const previewSource = doc.content || '';
+        const preview = previewSource.substring(0, 150).replace(/[#\n]/g, ' ').trim();
+        const sizeKb = previewSource ? (previewSource.length / 1024).toFixed(1) : null;
 
-	        const statusClass =
-	            doc.status === 'done'
-	                ? 'doc-status-done'
-	                : doc.status === 'streaming'
-	                ? 'doc-status-streaming'
-	                : 'doc-status-pending';
+        const statusClass =
+            doc.status === 'done'
+                ? 'doc-status-done'
+                : doc.status === 'streaming'
+                ? 'doc-status-streaming'
+                : 'doc-status-pending';
 
-	        const statusLabel =
-	            doc.status === 'done'
-	                ? '\u5df2\u5b8c\u6210'
-	                : doc.status === 'streaming'
-	                ? '\u751f\u6210\u4e2d...'
-	                : '\u7b49\u5f85\u751f\u6210';
+        const statusLabel =
+            doc.status === 'done'
+                ? '已完成'
+                : doc.status === 'streaming'
+                ? '生成中...'
+                : '等待生成';
 
-	        const showActions = doc.status === 'done';
+        const showActions = doc.status === 'done';
 
-	        // Reuse existing card element if present to avoid full reflow/jitter during streaming
-	        let card = documentsGrid.querySelector(`.document-card[data-doc-index="${index}"]`);
-	        if (!card) {
-	            card = document.createElement('div');
-	            card.className = 'document-card';
-	            card.dataset.docIndex = index.toString();
-	            documentsGrid.appendChild(card);
-	        }
+        // Reuse existing card element if present
+        let card = documentsGrid.querySelector(`.document-card[data-doc-index="${index}"]`);
+        const isNew = !card;
 
-	        // Attach / refresh click handler idempotently
-	        card.onclick = () => openDocument(index);
+        if (isNew) {
+            // Create card structure once
+            card = document.createElement('div');
+            card.className = 'document-card';
+            card.dataset.docIndex = index.toString();
+            card.innerHTML = `
+                <div class="doc-icon">
+                    <i class="fas ${icon}"></i>
+                </div>
+                <h4 class="doc-title"></h4>
+                <p class="doc-preview"></p>
+                <p class="doc-size"></p>
+                <div class="doc-footer">
+                    <div class="doc-status">
+                        <span class="doc-status-dot"></span>
+                        <span class="doc-status-label"></span>
+                    </div>
+                    <div class="doc-actions"></div>
+                </div>
+            `;
+            // Single click handler attached once
+            card.addEventListener('click', (e) => {
+                // Don't open if clicking action buttons
+                if (e.target.closest('.doc-action-btn')) return;
+                openDocument(index);
+            });
+            documentsGrid.appendChild(card);
+        }
 
-	        card.innerHTML = `
-	            <div class="doc-icon">
-	                <i class="fas ${icon}"></i>
-	            </div>
-	            <h4>${doc.name}</h4>
-	            <p class="doc-preview">${preview || '\u5185\u5bb9\u5c06\u5728\u8fd9\u91cc\u5b9e\u65f6\u663e\u793a...'}</p>
-	            <p class="doc-size">${sizeKb ? sizeKb + ' KB' : '\u6682\u65e0\u5185\u5bb9'}</p>
-	            <div class="doc-footer">
-	                <div class="doc-status ${statusClass}">
-	                    <span class="doc-status-dot"></span>
-	                    <span>${statusLabel}</span>
-	                </div>
-	                ${
-	                    showActions
-	                        ? `<div class="doc-actions">
-	                                <button class="doc-action-btn" title="\u590d\u5236" onclick="copyDocAtIndex(${index}, event)">
-	                                    <i class="fas fa-copy"></i>
-	                                </button>
-	                                <button class="doc-action-btn" title="\u4e0b\u8f7d" onclick="downloadDocAtIndex(${index}, event)">
-	                                    <i class="fas fa-download"></i>
-	                                </button>
-	                           </div>`
-	                        : ''
-	                }
-	            </div>
-	        `;
-	    });
-	}
+        // Update only changed parts (no innerHTML replacement after initial)
+        const titleEl = card.querySelector('.doc-title');
+        const previewEl = card.querySelector('.doc-preview');
+        const sizeEl = card.querySelector('.doc-size');
+        const statusEl = card.querySelector('.doc-status');
+        const statusLabelEl = card.querySelector('.doc-status-label');
+        const actionsEl = card.querySelector('.doc-actions');
+
+        if (titleEl && titleEl.textContent !== doc.name) {
+            titleEl.textContent = doc.name;
+        }
+
+        const displayPreview = preview || '内容将在这里实时显示...';
+        if (previewEl && previewEl.textContent !== displayPreview) {
+            previewEl.textContent = displayPreview;
+        }
+
+        const displaySize = sizeKb ? sizeKb + ' KB' : '暂无内容';
+        if (sizeEl && sizeEl.textContent !== displaySize) {
+            sizeEl.textContent = displaySize;
+        }
+
+        if (statusEl) {
+            statusEl.className = 'doc-status ' + statusClass;
+        }
+        if (statusLabelEl && statusLabelEl.textContent !== statusLabel) {
+            statusLabelEl.textContent = statusLabel;
+        }
+
+        // Only update actions when status changes to done
+        if (actionsEl) {
+            const hasButtons = actionsEl.children.length > 0;
+            if (showActions && !hasButtons) {
+                actionsEl.innerHTML = `
+                    <button class="doc-action-btn" title="复制" data-action="copy">
+                        <i class="fas fa-copy"></i>
+                    </button>
+                    <button class="doc-action-btn" title="下载" data-action="download">
+                        <i class="fas fa-download"></i>
+                    </button>
+                `;
+                // Add event listeners for action buttons
+                const copyBtn = actionsEl.querySelector('[data-action="copy"]');
+                const downloadBtn = actionsEl.querySelector('[data-action="download"]');
+                if (copyBtn) {
+                    copyBtn.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        copyDocAtIndex(index, e);
+                    });
+                }
+                if (downloadBtn) {
+                    downloadBtn.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        downloadDocAtIndex(index, e);
+                    });
+                }
+            }
+        }
+    });
+}
 
 // Legacy non-stream display (for /api/generate fallback)
 function displayDocuments(documents) {

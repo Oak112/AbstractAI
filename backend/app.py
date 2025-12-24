@@ -196,10 +196,26 @@ def generate_documents_stream(request: GenerateRequest):
     # Determine target model (default to gpt-5, allow gemini-2.5-pro)
     model_name = (request.model or "gpt-5").strip()
 
-    def event_stream():
-        """Inner generator that yields NDJSON events."""
+    # Gemini models don't support streaming in BuilderSpace API
+    # Fall back to non-streaming mode for gemini
+    is_gemini = "gemini" in model_name.lower()
+
+    def emit_doc_started(idx: int) -> str:
+        return json.dumps({"type": "doc_started", "doc_index": idx}, ensure_ascii=False) + "\n"
+
+    def emit_chunk(idx: int, text: str) -> str:
+        return json.dumps({
+            "type": "chunk",
+            "doc_index": idx,
+            "delta": text,
+        }, ensure_ascii=False) + "\n"
+
+    def emit_doc_complete(idx: int) -> str:
+        return json.dumps({"type": "doc_complete", "doc_index": idx}, ensure_ascii=False) + "\n"
+
+    def event_stream_gemini():
+        """Non-streaming mode for Gemini (emulate streaming events from full response)."""
         try:
-            # Send initial metadata so the frontend can prepare document slots
             meta_event = {
                 "type": "meta",
                 "project_name": project_name,
@@ -208,7 +224,43 @@ def generate_documents_stream(request: GenerateRequest):
             }
             yield json.dumps(meta_event, ensure_ascii=False) + "\n"
 
-            # Start streaming completion from BuilderSpace (OpenAI-compatible)
+            # Non-streaming call
+            response = client.chat.completions.create(
+                model=model_name,
+                messages=[{"role": "user", "content": full_prompt}],
+                max_tokens=32000,
+                temperature=1.0,
+            )
+            raw_text = response.choices[0].message.content or ""
+
+            # Parse documents from raw response
+            documents = parse_documents(raw_text)
+            if not documents:
+                documents = [{"name": "完整输出.md", "content": raw_text}]
+
+            # Emit events for each document
+            for idx, doc in enumerate(documents):
+                yield emit_doc_started(idx)
+                yield emit_chunk(idx, doc["content"])
+                yield emit_doc_complete(idx)
+
+            yield json.dumps({"type": "done"}, ensure_ascii=False) + "\n"
+
+        except Exception as e:
+            error_event = {"type": "error", "message": str(e)}
+            yield json.dumps(error_event, ensure_ascii=False) + "\n"
+
+    def event_stream():
+        """Streaming mode for GPT models."""
+        try:
+            meta_event = {
+                "type": "meta",
+                "project_name": project_name,
+                "document_names": DOCUMENT_NAMES,
+                "generated_at": datetime.now().isoformat(),
+            }
+            yield json.dumps(meta_event, ensure_ascii=False) + "\n"
+
             completion = client.chat.completions.create(
                 model=model_name,
                 messages=[{"role": "user", "content": full_prompt}],
@@ -221,22 +273,8 @@ def generate_documents_stream(request: GenerateRequest):
             current_doc_index = None
             max_sep_len = max(len(s) for s in DOCUMENT_SEPARATORS)
 
-            def emit_doc_started(idx: int) -> str:
-                return json.dumps({"type": "doc_started", "doc_index": idx}, ensure_ascii=False) + "\n"
-
-            def emit_chunk(idx: int, text: str) -> str:
-                return json.dumps({
-                    "type": "chunk",
-                    "doc_index": idx,
-                    "delta": text,
-                }, ensure_ascii=False) + "\n"
-
-            def emit_doc_complete(idx: int) -> str:
-                return json.dumps({"type": "doc_complete", "doc_index": idx}, ensure_ascii=False) + "\n"
-
             for chunk in completion:
                 choice = chunk.choices[0]
-                # In streaming mode, content arrives in delta
                 if not hasattr(choice, "delta") or choice.delta is None:
                     continue
                 delta_text = choice.delta.content
@@ -246,14 +284,10 @@ def generate_documents_stream(request: GenerateRequest):
                 buffer += delta_text
 
                 while True:
-                    # Until we see the first separator, don't emit any user-visible text
                     if current_doc_index is None:
                         first_sep = DOCUMENT_SEPARATORS[0]
                         sep_idx = buffer.find(first_sep)
                         if sep_idx == -1:
-                            # Avoid unbounded buffer if, for some reason, the model
-                            # does not respect the protocol; in that case, fall back
-                            # to treating everything as the first doc after a while.
                             if len(buffer) > 4000:
                                 current_doc_index = 0
                                 yield emit_doc_started(current_doc_index)
@@ -264,13 +298,11 @@ def generate_documents_stream(request: GenerateRequest):
                                     yield emit_chunk(current_doc_index, text_to_send)
                             break
 
-                        # Drop everything before the first separator and start DOC 0
-                        buffer = buffer[sep_idx + len(first_sep) :]
+                        buffer = buffer[sep_idx + len(first_sep):]
                         current_doc_index = 0
                         yield emit_doc_started(current_doc_index)
                         continue
 
-                    # We already started a document; look for the next separator
                     next_index = current_doc_index + 1
                     next_sep_idx = -1
                     if next_index < len(DOCUMENT_SEPARATORS):
@@ -278,8 +310,6 @@ def generate_documents_stream(request: GenerateRequest):
                         next_sep_idx = buffer.find(next_sep)
 
                     if next_sep_idx == -1:
-                        # No full next separator yet. Flush a "safe" prefix of the
-                        # buffer so we don't cut a separator in half.
                         safe_len = len(buffer) - (max_sep_len - 1)
                         if safe_len > 0:
                             text_to_send = buffer[:safe_len]
@@ -288,20 +318,17 @@ def generate_documents_stream(request: GenerateRequest):
                                 yield emit_chunk(current_doc_index, text_to_send)
                         break
 
-                    # Found the next separator in the buffer
                     content = buffer[:next_sep_idx]
                     if content:
                         yield emit_chunk(current_doc_index, content)
                     yield emit_doc_complete(current_doc_index)
 
-                    buffer = buffer[next_sep_idx + len(DOCUMENT_SEPARATORS[next_index]) :]
+                    buffer = buffer[next_sep_idx + len(DOCUMENT_SEPARATORS[next_index]):]
                     current_doc_index = next_index
                     yield emit_doc_started(current_doc_index)
-                    # Loop again in case multiple separators are already in buffer
 
-            # Stream has finished; flush any remaining content
+            # Stream finished; flush remaining
             if current_doc_index is None:
-                # We never saw a separator; treat everything as a single document 0
                 residual = buffer.strip()
                 if residual:
                     yield emit_doc_started(0)
@@ -319,7 +346,11 @@ def generate_documents_stream(request: GenerateRequest):
             error_event = {"type": "error", "message": str(e)}
             yield json.dumps(error_event, ensure_ascii=False) + "\n"
 
-    return StreamingResponse(event_stream(), media_type="application/jsonl")
+    # Use appropriate generator based on model
+    if is_gemini:
+        return StreamingResponse(event_stream_gemini(), media_type="application/jsonl")
+    else:
+        return StreamingResponse(event_stream(), media_type="application/jsonl")
 
 
 @app.post("/api/generate-from-file")
