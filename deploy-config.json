@@ -1,0 +1,8 @@
+{
+  "repo_url": "https://github.com/Oak112/AbstractAI",
+  "service_name": "abstractai",
+  "branch": "main",
+  "port": 8000,
+  "env_vars": {}
+}
+
