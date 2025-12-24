@@ -17,14 +17,15 @@ let isStreaming = false;
 // Model selection (gpt-5 / gemini-2.5-pro)
 let selectedModel = 'gpt-5';
 
-// DOM Elements
-const contextInput = document.getElementById('contextInput');
-const charCount = document.getElementById('charCount');
-const fileInput = document.getElementById('fileInput');
-const fileName = document.getElementById('fileName');
-const projectName = document.getElementById('projectName');
-const generateBtn = document.getElementById('generateBtn');
-const heroInputCard = document.getElementById('heroInputCard');
+    // DOM Elements
+    const contextInput = document.getElementById('contextInput');
+    const charCount = document.getElementById('charCount');
+    const fileInput = document.getElementById('fileInput');
+    const fileName = document.getElementById('fileName');
+    const projectName = document.getElementById('projectName');
+    const generateBtn = document.getElementById('generateBtn');
+    const heroContent = document.getElementById('heroContent');
+    const heroInputCard = document.getElementById('heroInputCard');
 const loadingSection = document.getElementById('loadingSection');
 const resultsSection = document.getElementById('resultsSection');
 const documentsGrid = document.getElementById('documentsGrid');
@@ -99,6 +100,9 @@ async function generateDocuments() {
 	    currentDocumentIndex = null;
 
 	    // Prepare UI
+	    if (heroContent) {
+	        heroContent.style.display = 'none';
+	    }
 	    heroInputCard.style.display = 'none';
 	    loadingSection.style.display = 'none';
 	    resultsSection.style.display = 'block';
@@ -157,6 +161,9 @@ async function generateDocuments() {
 
 	    } catch (error) {
 	        console.error('Generation error:', error);
+	        if (heroContent) {
+	            heroContent.style.display = 'block';
+	        }
 	        heroInputCard.style.display = 'block';
 	        resultsSection.style.display = 'none';
 	        showToast(`生成失败: ${error.message || error}`, 'error');
@@ -444,7 +451,10 @@ async function downloadAll() {
 
 // Reset form
 function resetForm() {
-	    heroInputCard.style.display = 'block';
+		    if (heroContent) {
+		        heroContent.style.display = 'block';
+		    }
+		    heroInputCard.style.display = 'block';
 	    resultsSection.style.display = 'none';
 	    loadingSection.style.display = 'none';
 	    generatedDocuments = [];
