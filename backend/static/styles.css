@@ -176,6 +176,35 @@ body {
     font-size: 1rem;
 }
 
+/* Hero: AI usage hint */
+.hero-ai-usage {
+    margin-top: 1rem;
+    padding: 0.75rem 1rem;
+    border-radius: 0.75rem;
+    border: 1px dashed rgba(148, 163, 184, 0.6);
+    background: rgba(15, 23, 42, 0.7);
+    font-size: 0.85rem;
+    color: var(--text-muted);
+}
+
+.hero-ai-usage-title {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    margin-bottom: 0.35rem;
+    font-weight: 500;
+    color: var(--text);
+}
+
+.hero-ai-usage-title i {
+    color: var(--primary-light);
+}
+
+.hero-ai-usage p {
+    margin: 0;
+    line-height: 1.5;
+}
+
 /* Right: Input Card (Glass Morphism) */
 .hero-input-card {
     background: rgba(30, 41, 59, 0.6);
@@ -305,23 +334,47 @@ body {
 
 /* Sections */
 .section-header {
-    margin-bottom: 1.5rem;
+	display: flex;
+	justify-content: space-between;
+	align-items: flex-end;
+	gap: 1.75rem;
+	margin-bottom: 1.5rem;
+}
+
+.section-header-main {
+	display: flex;
+	flex-direction: column;
+	gap: 0.75rem;
+	flex: 1;
+}
+
+.section-header-title-row {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 1.25rem;
 }
 
 .section-header h2 {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    font-size: 1.5rem;
-    margin-bottom: 0.5rem;
+	display: flex;
+	align-items: center;
+	gap: 0.75rem;
+	font-size: 1.5rem;
+	margin: 0;
 }
 
 .section-header h2 i {
-    color: var(--primary);
+	color: var(--primary);
 }
 
 .section-header p {
-    color: var(--text-muted);
+	color: var(--text-muted);
+}
+
+.ai-prompt-inline {
+	max-width: 360px;
+	align-self: flex-start;
+	margin-top: 0.35rem;
 }
 
 /* Input / results sections */
@@ -906,48 +959,65 @@ body {
 }
 
 /* Responsive */
-@media (max-width: 768px) {
-    .app-container {
-        padding: 1rem;
-    }
+	@media (max-width: 768px) {
+	    .app-container {
+	        padding: 1rem;
+	    }
 
-    .logo {
-        font-size: 1.75rem;
-    }
+	    .logo {
+	        font-size: 1.75rem;
+	    }
 
-    .hero-split {
-        grid-template-columns: 1fr;
-        gap: 2rem;
-    }
+	    .hero-split {
+	        grid-template-columns: 1fr;
+	        gap: 2rem;
+	    }
 
-    .hero-title {
-        font-size: 1.75rem;
-    }
+	    .hero-title {
+	        font-size: 1.75rem;
+	    }
 
-    .hero-steps {
-        flex-direction: column;
-        align-items: stretch;
-    }
+	    .hero-steps {
+	        flex-direction: column;
+	        align-items: stretch;
+	    }
 
-    .step-arrow {
-        transform: rotate(90deg);
-        align-self: center;
-    }
+	    .step-arrow {
+	        transform: rotate(90deg);
+	        align-self: center;
+	    }
 
-    .hero-input-card {
-        padding: 1.5rem;
-    }
+	    .hero-input-card {
+	        padding: 1.5rem;
+	    }
 
-    .documents-grid {
-        grid-template-columns: 1fr;
-    }
+	    .documents-grid {
+	        grid-template-columns: 1fr;
+	    }
 
-    .modal-header {
-        flex-direction: column;
-        gap: 1rem;
-        align-items: flex-start;
-    }
-}
+	    .modal-header {
+	        flex-direction: column;
+	        gap: 1rem;
+	        align-items: flex-start;
+	    }
+
+	    .section-header {
+	        flex-direction: column;
+	        align-items: stretch;
+	    }
+
+	    .section-header-title-row {
+	        flex-direction: column;
+	        align-items: flex-start;
+	        gap: 0.75rem;
+	    }
+
+	    .ai-prompt-inline {
+	        align-self: stretch;
+	        max-width: 100%;
+	        margin-top: 1rem;
+	    }
+	}
 
 /* Elapsed Timer */
 .elapsed-timer {
@@ -973,12 +1043,16 @@ body {
 
 /* AI Prompt Box */
 .ai-prompt-box {
-    margin-top: 2rem;
-    background: rgba(30, 41, 59, 0.6);
-    backdrop-filter: blur(10px);
-    border: 1px solid rgba(148, 163, 184, 0.2);
-    border-radius: 0.75rem;
-    padding: 1.25rem;
+	margin-top: 0;
+	background: rgba(30, 41, 59, 0.6);
+	backdrop-filter: blur(10px);
+	border: 1px solid rgba(148, 163, 184, 0.2);
+	border-radius: 0.75rem;
+	padding: 1.25rem;
+}
+
+.results-section .ai-prompt-inline {
+	margin-top: 0.35rem;
 }
 
 .ai-prompt-header {

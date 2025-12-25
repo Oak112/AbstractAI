@@ -19,28 +19,28 @@
 	            <div class="header-subtitle">将长对话内容转化为清晰完整的产品开发说明文档</div>
 	        </header>
 
-		        <!-- Hero Section: Left content + Right input card -->
-		        <section class="hero-split">
-		            <!-- Left: Value Proposition -->
-		            <div class="hero-content" id="heroContent">
+	            <!-- Hero Section: Left content + Right input card -->
+	            <section class="hero-split">
+	                <!-- Left: Value Proposition -->
+	                <div class="hero-content" id="heroContent">
 	                <h1 class="hero-title">把一段对话，变成工程师能直接开干的 11 份规格文档</h1>
 	                <p class="hero-description">
-	                    粘贴聊天记录 / 会议录音 / 任意文本或上传文件。AI 自动提炼决策与约束，输出结构化文档，并支持逐份下载与一键打包。
+	                    粘贴聊天记录 / 会议记录 / 任意文本或上传文件，AI 自动提炼决策与约束，整理成一整套结构化规格文档。
 	                </p>
 
 	                <!-- 3 Key Benefits -->
 	                <ul class="hero-benefits">
 	                    <li>
 	                        <i class="fas fa-check-circle"></i>
-	                        <span>不丢关键决策：目标、范围、约束、边界、风险全覆盖</span>
+	                        <span>关键决策不遗漏：目标、范围、约束、边界、风险一并梳理清楚</span>
 	                    </li>
 	                    <li>
 	                        <i class="fas fa-check-circle"></i>
-	                        <span>对人和 AI 都友好：可直接交给 Cursor / 编程 AI 生成实现方案</span>
+	                        <span>对人和 AI 都友好：格式统一、结构清晰，工程师即拿即用</span>
 	                    </li>
 	                    <li>
 	                        <i class="fas fa-check-circle"></i>
-	                        <span>11 份文档按顺序点亮，可实时预览、下载</span>
+	                        <span>支持逐份预览与一键打包下载，方便放入项目仓库</span>
 	                    </li>
 	                </ul>
 
@@ -48,18 +48,29 @@
 	                <div class="hero-steps">
 	                    <div class="step-item">
 	                        <div class="step-number">1</div>
-	                        <div class="step-text">粘贴或上传原始内容</div>
+	                        <div class="step-text">粘贴 / 上传原始对话与需求</div>
 	                    </div>
 	                    <div class="step-arrow">→</div>
 	                    <div class="step-item">
 	                        <div class="step-number">2</div>
-	                        <div class="step-text">选择模型，点击生成</div>
+	                        <div class="step-text">生成 11 份工程师能直接开干的规格文档</div>
 	                    </div>
 	                    <div class="step-arrow">→</div>
 	                    <div class="step-item">
 	                        <div class="step-number">3</div>
-	                        <div class="step-text">逐份预览/下载</div>
+	                        <div class="step-text">把上下文 + 文档 + Prompt 丢给编程 AI 实现</div>
 	                    </div>
+	                </div>
+
+	                <!-- How to use with coding AI -->
+	                <div class="hero-ai-usage">
+	                    <div class="hero-ai-usage-title">
+	                        <i class="fas fa-robot"></i>
+	                        <span>整个系统怎么用？</span>
+	                    </div>
+	                    <p>
+	                        把<strong>原始对话上下文</strong>和<strong>这 11 份规格文档</strong>一起放进你的项目仓库，然后在结果页一键复制<strong>实现用 Prompt</strong>，作为指令发给 Cursor / Claude / ChatGPT 等编程 AI，它就能基于这些材料直接开干。
+	                    </p>
 	                </div>
 	            </div>
 
@@ -139,44 +150,45 @@
 	            <!-- Results Section -->
 	            <section class="results-section" id="resultsSection" style="display: none;">
 	                <div class="section-header">
-	                    <h2><i class="fas fa-file-alt"></i> 生成的文档</h2>
-	                    <div class="results-actions">
-                        <button class="action-btn" onclick="downloadAll()">
-                            <i class="fas fa-download"></i> 下载全部
-                        </button>
-	                        <button class="action-btn secondary" onclick="resetForm()">
-	                            <i class="fas fa-redo"></i> 重新开始
-	                        </button>
-	                    </div>
-	                    <div class="results-meta">
-	                        <p id="generationStatus" class="generation-status">准备生成 11 份文档</p>
-	                        <span id="elapsedTimer" class="elapsed-timer"></span>
-	                        <div class="generation-progress">
-	                            <div class="generation-progress-bar">
-	                                <div id="generationProgressFill" class="generation-progress-fill"></div>
+	                    <div class="section-header-main">
+	                        <div class="section-header-title-row">
+	                            <h2><i class="fas fa-file-alt"></i> 生成的文档</h2>
+	                            <div class="results-actions">
+	                                <button class="action-btn" onclick="downloadAll()">
+	                                    <i class="fas fa-download"></i> 下载全部
+	                                </button>
+	                                <button class="action-btn secondary" onclick="resetForm()">
+	                                    <i class="fas fa-redo"></i> 重新开始
+	                                </button>
 	                            </div>
-	                            <span id="generationProgressText" class="generation-progress-text"></span>
+	                        </div>
+	                        <div class="results-meta">
+	                            <p id="generationStatus" class="generation-status">准备生成 11 份文档</p>
+	                            <span id="elapsedTimer" class="elapsed-timer"></span>
+	                            <div class="generation-progress">
+	                                <div class="generation-progress-bar">
+	                                    <div id="generationProgressFill" class="generation-progress-fill"></div>
+	                                </div>
+	                                <span id="generationProgressText" class="generation-progress-text"></span>
+	                            </div>
 	                        </div>
 	                    </div>
-	                </div>
 
-	                <div class="documents-grid" id="documentsGrid"></div>
-
-	                <!-- AI Coding Prompt Box -->
-	                <div class="ai-prompt-box" id="aiPromptBox">
-	                    <div class="ai-prompt-header">
-	                        <div class="ai-prompt-title">
-	                            <i class="fas fa-robot"></i>
-	                            <span>下一步：让 AI 帮你实现</span>
+	                    <!-- AI Coding Prompt Box (inline on the right) -->
+	                    <div class="ai-prompt-box ai-prompt-inline" id="aiPromptBox">
+	                        <div class="ai-prompt-header">
+	                            <div class="ai-prompt-title">
+	                                <i class="fas fa-robot"></i>
+	                                <span>下一步：让 AI 帮你实现</span>
+	                            </div>
+	                            <button class="copy-prompt-btn" onclick="copyAiPrompt()">
+	                                <i class="fas fa-copy"></i> 一键复制
+	                            </button>
 	                        </div>
-	                        <button class="copy-prompt-btn" onclick="copyAiPrompt()">
-	                            <i class="fas fa-copy"></i> 一键复制
-	                        </button>
-	                    </div>
-	                    <div class="ai-prompt-guide">
-	                        <p><strong>使用方法：</strong>将<u>原始对话上下文</u>、<u>生成的 11 份文档</u>和<u>下方 Prompt</u> 一起发给 Cursor / Claude / ChatGPT 等编程 AI，它会自动理解需求并完成实现。</p>
-	                    </div>
-	                    <textarea id="aiPromptText" class="ai-prompt-textarea" readonly>从现在开始，请你在不向我提问、不等我确认的前提下，把当前项目从理解到实现完整做完。
+	                        <div class="ai-prompt-guide">
+	                            <p><strong>使用方法：</strong>把<u>原始对话上下文</u>和<u>生成的 11 份文档</u>一起放进你的项目仓库，然后把<u>下方 Prompt</u> 作为指令发给 Cursor / Claude / ChatGPT 等编程 AI，它会自动理解需求并完成实现。</p>
+	                        </div>
+	                        <textarea id="aiPromptText" class="ai-prompt-textarea" readonly>从现在开始，请你在不向我提问、不等我确认的前提下，把当前项目从理解到实现完整做完。
 
 第一步，先默默完成理解工作（不用逐条复述给我听）：
 - 浏览当前工作区的所有文件和子目录，包括文档、源码、脚本、配置、原始对话/会议记录/需求说明等，尽量做到不遗漏。
@@ -196,7 +208,10 @@
 - 遇到信息缺失时，在合理范围内自己做明确的假设并记录下来，继续往前推进，不要停下来问我"要不要这样做"。
 
 只有在遇到硬性限制、权限问题或完全无法继续推进的客观阻碍时，才向我简要说明情况；在其他情况下，请一直按照你的最佳判断，把项目实现、整理和验证到你认为"没有明显问题、符合所有已知要求"的状态再停下来。</textarea>
+	                    </div>
 	                </div>
+
+	                <div class="documents-grid" id="documentsGrid"></div>
             </section>
         </main>
 
