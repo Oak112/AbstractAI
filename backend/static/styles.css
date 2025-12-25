@@ -949,3 +949,117 @@ body {
     }
 }
 
+/* Elapsed Timer */
+.elapsed-timer {
+    display: inline-block;
+    background: rgba(99, 102, 241, 0.15);
+    border: 1px solid rgba(99, 102, 241, 0.3);
+    border-radius: 999px;
+    padding: 0.25rem 0.75rem;
+    font-size: 0.85rem;
+    color: var(--primary-light);
+    margin-left: 0.75rem;
+    animation: pulse-glow 2s ease-in-out infinite;
+}
+
+.elapsed-timer:empty {
+    display: none;
+}
+
+@keyframes pulse-glow {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
+}
+
+/* AI Prompt Box */
+.ai-prompt-box {
+    margin-top: 2rem;
+    background: rgba(30, 41, 59, 0.6);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(148, 163, 184, 0.2);
+    border-radius: 0.75rem;
+    padding: 1.25rem;
+}
+
+.ai-prompt-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.75rem;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.ai-prompt-title {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text);
+}
+
+.ai-prompt-title i {
+    color: var(--primary-light);
+}
+
+.copy-prompt-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.4rem 0.85rem;
+    background: var(--primary);
+    border: none;
+    border-radius: 0.4rem;
+    color: white;
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: background 0.2s, transform 0.1s;
+}
+
+.copy-prompt-btn:hover {
+    background: var(--primary-dark);
+}
+
+.copy-prompt-btn:active {
+    transform: scale(0.97);
+}
+
+.ai-prompt-guide {
+    margin-bottom: 0.75rem;
+}
+
+.ai-prompt-guide p {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    line-height: 1.5;
+    margin: 0;
+}
+
+.ai-prompt-guide u {
+    color: var(--secondary);
+    text-decoration: none;
+    border-bottom: 1px dashed var(--secondary);
+}
+
+.ai-prompt-textarea {
+    width: 100%;
+    min-height: 120px;
+    max-height: 200px;
+    padding: 0.75rem;
+    background: rgba(15, 23, 42, 0.5);
+    border: 1px solid var(--border);
+    border-radius: 0.5rem;
+    color: var(--text);
+    font-family: 'Monaco', 'Menlo', 'Consolas', monospace;
+    font-size: 0.75rem;
+    line-height: 1.5;
+    resize: vertical;
+    cursor: text;
+}
+
+.ai-prompt-textarea:focus {
+    outline: none;
+    border-color: var(--primary);
+}
+

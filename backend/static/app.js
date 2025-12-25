@@ -22,7 +22,11 @@ let renderPending = false;
 let lastRenderTime = 0;
 const RENDER_THROTTLE_MS = 100;
 
-    // DOM Elements
+// Elapsed timer state
+let elapsedTimerInterval = null;
+let generationStartTime = null;
+
+// DOM Elements
     const contextInput = document.getElementById('contextInput');
     const charCount = document.getElementById('charCount');
     const fileInput = document.getElementById('fileInput');
@@ -41,6 +45,7 @@ const toast = document.getElementById('toast');
 const generationStatusEl = document.getElementById('generationStatus');
 const generationProgressFill = document.getElementById('generationProgressFill');
 const generationProgressText = document.getElementById('generationProgressText');
+const elapsedTimerEl = document.getElementById('elapsedTimer');
 const modelToggleButtons = document.querySelectorAll('.model-toggle');
 
 // Icon mapping for different document types
@@ -117,6 +122,10 @@ async function generateDocuments() {
 	    generationProgressText.textContent = '';
 	    generateBtn.disabled = true;
 
+	    // Start elapsed timer
+	    clearElapsedTimer();
+	    startElapsedTimer();
+
 	    try {
 	        const response = await fetch('/api/generate-stream', {
 	            method: 'POST',
@@ -172,6 +181,7 @@ async function generateDocuments() {
 	        heroInputCard.style.display = 'block';
 	        resultsSection.style.display = 'none';
 	        showToast(`生成失败: ${error.message || error}`, 'error');
+	        clearElapsedTimer();
 	    } finally {
 	        isStreaming = false;
 	        generateBtn.disabled = false;
@@ -233,11 +243,14 @@ function handleStreamEvent(event) {
 	            // Finalize generatedDocuments for downloadAll / legacy APIs
 	            generatedDocuments = docStates.map((d) => ({ name: d.name, content: d.content }));
 	            generationStatusEl.textContent = `已生成完成 ${docsCompleted} / ${totalDocsExpected} 份文档`;
+	            // Stop timer but keep final time displayed
+	            stopElapsedTimer();
 	            break;
 	        }
 	        case 'error': {
 	            generationStatusEl.textContent = '生成失败, 请稍后重试';
 	            showToast(event.message || '生成失败', 'error');
+	            clearElapsedTimer();
 	            break;
 	        }
 	        case 'heartbeat': {
@@ -552,6 +565,7 @@ function resetForm() {
 	    generationStatusEl.textContent = '准备生成 11 份文档';
 	    generationProgressFill.style.width = '0%';
 	    generationProgressText.textContent = '';
+	    clearElapsedTimer();
 }
 
 // Show toast notification
@@ -577,4 +591,56 @@ modal.addEventListener('click', (e) => {
         closeModal();
     }
 });
+
+// ========== Elapsed Timer Functions ==========
+
+function startElapsedTimer() {
+    generationStartTime = Date.now();
+    updateElapsedTimer();
+    elapsedTimerInterval = setInterval(updateElapsedTimer, 1000);
+}
+
+function stopElapsedTimer() {
+    if (elapsedTimerInterval) {
+        clearInterval(elapsedTimerInterval);
+        elapsedTimerInterval = null;
+    }
+}
+
+function updateElapsedTimer() {
+    if (!generationStartTime || !elapsedTimerEl) return;
+    const elapsed = Math.floor((Date.now() - generationStartTime) / 1000);
+    const minutes = Math.floor(elapsed / 60);
+    const seconds = elapsed % 60;
+    if (minutes > 0) {
+        elapsedTimerEl.textContent = `已用时 ${minutes} 分 ${seconds} 秒`;
+    } else {
+        elapsedTimerEl.textContent = `已用时 ${seconds} 秒`;
+    }
+}
+
+function clearElapsedTimer() {
+    stopElapsedTimer();
+    generationStartTime = null;
+    if (elapsedTimerEl) {
+        elapsedTimerEl.textContent = '';
+    }
+}
+
+// ========== Copy AI Prompt ==========
+
+function copyAiPrompt() {
+    const promptTextarea = document.getElementById('aiPromptText');
+    if (!promptTextarea) return;
+
+    const text = promptTextarea.value;
+    navigator.clipboard.writeText(text).then(() => {
+        showToast('Prompt 已复制到剪贴板', 'success');
+    }).catch(() => {
+        // Fallback for older browsers
+        promptTextarea.select();
+        document.execCommand('copy');
+        showToast('Prompt 已复制到剪贴板', 'success');
+    });
+}
 

@@ -150,6 +150,7 @@
 	                    </div>
 	                    <div class="results-meta">
 	                        <p id="generationStatus" class="generation-status">准备生成 11 份文档</p>
+	                        <span id="elapsedTimer" class="elapsed-timer"></span>
 	                        <div class="generation-progress">
 	                            <div class="generation-progress-bar">
 	                                <div id="generationProgressFill" class="generation-progress-fill"></div>
@@ -158,8 +159,44 @@
 	                        </div>
 	                    </div>
 	                </div>
-	                
+
 	                <div class="documents-grid" id="documentsGrid"></div>
+
+	                <!-- AI Coding Prompt Box -->
+	                <div class="ai-prompt-box" id="aiPromptBox">
+	                    <div class="ai-prompt-header">
+	                        <div class="ai-prompt-title">
+	                            <i class="fas fa-robot"></i>
+	                            <span>下一步：让 AI 帮你实现</span>
+	                        </div>
+	                        <button class="copy-prompt-btn" onclick="copyAiPrompt()">
+	                            <i class="fas fa-copy"></i> 一键复制
+	                        </button>
+	                    </div>
+	                    <div class="ai-prompt-guide">
+	                        <p><strong>使用方法：</strong>将<u>原始对话上下文</u>、<u>生成的 11 份文档</u>和<u>下方 Prompt</u> 一起发给 Cursor / Claude / ChatGPT 等编程 AI，它会自动理解需求并完成实现。</p>
+	                    </div>
+	                    <textarea id="aiPromptText" class="ai-prompt-textarea" readonly>从现在开始，请你在不向我提问、不等我确认的前提下，把当前项目从理解到实现完整做完。
+
+第一步，先默默完成理解工作（不用逐条复述给我听）：
+- 浏览当前工作区的所有文件和子目录，包括文档、源码、脚本、配置、原始对话/会议记录/需求说明等，尽量做到不遗漏。
+- 搞清楚每个文件、每类文档的用途，它们之间的关系，以及它们共同描述的这个项目到底要做什么。
+- 如有多份规格文档、设计文档和原始对话，请结合起来理解真实需求和约束，而不是只看其中一份。
+- 在环境允许和安全前提下，可以自行查阅公开资料做补充，形成你自己的整体方案。
+
+第二步，在你自己已经搞清楚之后，自动从头到尾执行，不要停在"计划"层面：
+- 可以先用极简的几句话概括一下你理解的目标和大致路线，但写完就立刻开始动手，不要等我"同意"。
+- 按你认为合理的顺序，逐步创建/修改文件，搭建项目结构，实现前后端、数据层、模型调用等所有必要部分。
+- 在需要依赖或隔离环境时，优先使用虚拟环境或容器（如 venv 等），保持可复现和不污染全局环境。
+- 不要只给高层方案或 TODO 列表，而是直接给出具体的代码、配置、命令和运行方式。
+
+第三步，持续自检和完善，直到项目真正可用为止：
+- 参考现有文档中的需求、边界情况、验收标准等内容，为关键功能设计并执行合理的测试（可以是自动化测试，也可以是明确的手动测试步骤）。
+- 发现冲突或不一致时，自己先消化：尽量协调代码和文档，让它们相互匹配，必要时在文档或注释中写明你的处理方式和假设。
+- 遇到信息缺失时，在合理范围内自己做明确的假设并记录下来，继续往前推进，不要停下来问我"要不要这样做"。
+
+只有在遇到硬性限制、权限问题或完全无法继续推进的客观阻碍时，才向我简要说明情况；在其他情况下，请一直按照你的最佳判断，把项目实现、整理和验证到你认为"没有明显问题、符合所有已知要求"的状态再停下来。</textarea>
+	                </div>
             </section>
         </main>
 
