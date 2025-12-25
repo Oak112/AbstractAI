@@ -634,13 +634,38 @@ function copyAiPrompt() {
     if (!promptTextarea) return;
 
     const text = promptTextarea.value;
-    navigator.clipboard.writeText(text).then(() => {
-        showToast('Prompt 已复制到剪贴板', 'success');
-    }).catch(() => {
-        // Fallback for older browsers
-        promptTextarea.select();
-        document.execCommand('copy');
-        showToast('Prompt 已复制到剪贴板', 'success');
-    });
+
+    // More robust copy approach
+    function fallbackCopy() {
+        // Create a temporary textarea for copying
+        const tempTextarea = document.createElement('textarea');
+        tempTextarea.value = text;
+        tempTextarea.style.position = 'fixed';
+        tempTextarea.style.left = '-9999px';
+        tempTextarea.style.top = '0';
+        document.body.appendChild(tempTextarea);
+        tempTextarea.focus();
+        tempTextarea.select();
+
+        try {
+            document.execCommand('copy');
+            showToast('Prompt 已复制到剪贴板', 'success');
+        } catch (err) {
+            showToast('复制失败，请手动复制', 'error');
+        }
+
+        document.body.removeChild(tempTextarea);
+    }
+
+    // Try modern clipboard API first
+    if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(text).then(() => {
+            showToast('Prompt 已复制到剪贴板', 'success');
+        }).catch(() => {
+            fallbackCopy();
+        });
+    } else {
+        fallbackCopy();
+    }
 }
 
