@@ -335,10 +335,10 @@ body {
 /* Sections */
 .section-header {
 	display: flex;
-	justify-content: space-between;
-	align-items: flex-end;
-	gap: 1.75rem;
-	margin-bottom: 1.5rem;
+	flex-direction: column;
+	align-items: stretch;
+	gap: 1.25rem;
+	margin-bottom: 1.75rem;
 }
 
 .section-header-main {
@@ -372,9 +372,9 @@ body {
 }
 
 .ai-prompt-inline {
-	    max-width: 440px;
-	    align-self: flex-start;
-	    margin-top: 0.35rem;
+	    align-self: stretch;
+	    max-width: 100%;
+	    margin-top: 0;
 }
 
 /* Input / results sections */
@@ -1052,7 +1052,7 @@ body {
 }
 
 .results-section .ai-prompt-inline {
-	margin-top: 0.35rem;
+	margin-top: 0;
 }
 
 .ai-prompt-header {
