@@ -1,4 +1,4 @@
-// Context Compiler - Frontend Application (streaming version)
+// Abstraction AI - Frontend Application (streaming version)
 
 // Final documents (used for download, legacy compatibility)
 let generatedDocuments = [];

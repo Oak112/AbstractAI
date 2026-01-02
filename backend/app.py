@@ -1,4 +1,4 @@
-"""Context Compiler - Main FastAPI Application"""
+"""Abstraction AI - Main FastAPI Application"""
 
 import os
 import re
@@ -32,7 +32,7 @@ client = OpenAI(
 )
 
 app = FastAPI(
-    title="Context Compiler",
+    title="Abstraction AI",
     description="将长对话/会议记录编译成一套完整的产品规格文档",
     version="1.0.0"
 )
@@ -111,7 +111,7 @@ async def root():
     static_path = Path(__file__).parent / "static" / "index.html"
     if static_path.exists():
         return FileResponse(static_path)
-    return {"message": "Context Compiler API", "status": "running"}
+    return {"message": "Abstraction AI API", "status": "running"}
 
 
 @app.get("/health")
