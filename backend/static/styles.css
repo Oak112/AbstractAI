@@ -456,6 +456,56 @@ body {
 	font-size: 0.875rem;
 }
 
+/* File List for multiple uploads */
+.file-list {
+	display: flex;
+	flex-direction: column;
+	gap: 0.5rem;
+	margin-top: 0.75rem;
+}
+
+.file-item {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: 0.5rem 0.75rem;
+	background: rgba(15, 23, 42, 0.6);
+	border: 1px solid var(--border);
+	border-radius: 6px;
+	font-size: 0.85rem;
+}
+
+.file-item-name {
+	color: var(--text-secondary);
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.file-item-name i {
+	color: var(--primary);
+	flex-shrink: 0;
+}
+
+.file-remove-btn {
+	background: none;
+	border: none;
+	color: var(--text-muted);
+	cursor: pointer;
+	padding: 0.25rem;
+	border-radius: 4px;
+	transition: color 0.2s, background 0.2s;
+	flex-shrink: 0;
+}
+
+.file-remove-btn:hover {
+	color: #ef4444;
+	background: rgba(239, 68, 68, 0.1);
+}
+
 .model-select {
 	min-width: 230px;
 	display: flex;

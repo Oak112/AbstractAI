@@ -30,7 +30,7 @@ let generationStartTime = null;
     const contextInput = document.getElementById('contextInput');
     const charCount = document.getElementById('charCount');
     const fileInput = document.getElementById('fileInput');
-    const fileName = document.getElementById('fileName');
+    const fileList = document.getElementById('fileList');
     const projectName = document.getElementById('projectName');
     const generateBtn = document.getElementById('generateBtn');
     const heroContent = document.getElementById('heroContent');
@@ -79,16 +79,76 @@ if (modelToggleButtons && modelToggleButtons.length) {
 	    });
 }
 
-// File upload
+// File upload - support multiple files
+let uploadedFiles = [];
+
 fileInput.addEventListener('change', async (e) => {
-    const file = e.target.files[0];
-    if (file) {
-        fileName.textContent = file.name;
-        const text = await file.text();
-        contextInput.value = text;
-        charCount.textContent = text.length;
+    const files = Array.from(e.target.files);
+    if (files.length === 0) return;
+
+    // Add new files to the list
+    for (const file of files) {
+        // Avoid duplicates
+        if (!uploadedFiles.some(f => f.name === file.name && f.size === file.size)) {
+            uploadedFiles.push(file);
+        }
     }
+
+    // Update UI
+    renderFileList();
+
+    // Combine all file contents
+    await combineFileContents();
 });
+
+function renderFileList() {
+    if (uploadedFiles.length === 0) {
+        fileList.innerHTML = '';
+        return;
+    }
+
+    fileList.innerHTML = uploadedFiles.map((file, index) => `
+        <div class="file-item">
+            <span class="file-item-name"><i class="fas fa-file-alt"></i> ${file.name}</span>
+            <button type="button" class="file-remove-btn" data-index="${index}" title="移除">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+    `).join('');
+
+    // Add remove handlers
+    fileList.querySelectorAll('.file-remove-btn').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+            const index = parseInt(btn.dataset.index);
+            uploadedFiles.splice(index, 1);
+            renderFileList();
+            await combineFileContents();
+        });
+    });
+}
+
+async function combineFileContents() {
+    if (uploadedFiles.length === 0) {
+        contextInput.value = '';
+        charCount.textContent = '0';
+        return;
+    }
+
+    const contents = [];
+    for (const file of uploadedFiles) {
+        try {
+            const text = await file.text();
+            contents.push(`=== ${file.name} ===\n${text}`);
+        } catch (err) {
+            console.error(`Error reading ${file.name}:`, err);
+            contents.push(`=== ${file.name} ===\n[无法读取文件内容]`);
+        }
+    }
+
+    const combined = contents.join('\n\n');
+    contextInput.value = combined;
+    charCount.textContent = combined.length;
+}
 
 // Generate documents (streaming via /api/generate-stream)
 async function generateDocuments() {

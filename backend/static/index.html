@@ -107,13 +107,13 @@
 
 	                    <!-- File Upload -->
 	                    <div class="form-group">
-	                        <label>或上传文件</label>
+	                        <label>或上传文件（支持多选）</label>
 	                        <label for="fileInput" class="file-upload-btn">
 	                            <i class="fas fa-upload"></i>
 	                            <span>选择文件</span>
 	                        </label>
-	                        <input type="file" id="fileInput" accept=".txt,.md,.doc,.docx" hidden>
-	                        <span id="fileName" class="file-name"></span>
+	                        <input type="file" id="fileInput" accept=".txt,.md,.doc,.docx,.pdf" multiple hidden>
+	                        <div id="fileList" class="file-list"></div>
 	                    </div>
 
 	                    <!-- Model Selection -->
