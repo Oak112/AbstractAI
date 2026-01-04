@@ -9,6 +9,14 @@
       gtag('js', new Date());
       gtag('config', 'G-Y4QBW4LZ83');
     </script>
+    <!-- Microsoft Clarity -->
+    <script type="text/javascript">
+      (function(c,l,a,r,i,t,y){
+        c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
+        t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
+        y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
+      })(window, document, "clarity", "script", "CLARITY_PROJECT_ID");
+    </script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Abstraction AI - 上下文编译器</title>
@@ -248,6 +256,53 @@
 
         <!-- Toast Notification -->
         <div class="toast" id="toast"></div>
+
+        <!-- Feedback Widget (appears after generation) -->
+        <div class="feedback-widget" id="feedbackWidget" style="display: none;">
+            <div class="feedback-question">这次生成的结果对你有帮助吗？</div>
+            <div class="feedback-buttons">
+                <button class="feedback-btn feedback-positive" onclick="submitFeedback('positive')">
+                    <i class="fas fa-thumbs-up"></i> 有用
+                </button>
+                <button class="feedback-btn feedback-negative" onclick="submitFeedback('negative')">
+                    <i class="fas fa-thumbs-down"></i> 没用
+                </button>
+            </div>
+            <button class="feedback-dismiss" onclick="dismissFeedback()">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+
+        <!-- NPS Survey Modal -->
+        <div class="nps-modal" id="npsModal" style="display: none;">
+            <div class="nps-content">
+                <button class="nps-close" onclick="closeNPS()">
+                    <i class="fas fa-times"></i>
+                </button>
+                <h3>你有多大可能向朋友推荐这个工具？</h3>
+                <div class="nps-scale">
+                    <button class="nps-score" data-score="0">0</button>
+                    <button class="nps-score" data-score="1">1</button>
+                    <button class="nps-score" data-score="2">2</button>
+                    <button class="nps-score" data-score="3">3</button>
+                    <button class="nps-score" data-score="4">4</button>
+                    <button class="nps-score" data-score="5">5</button>
+                    <button class="nps-score" data-score="6">6</button>
+                    <button class="nps-score" data-score="7">7</button>
+                    <button class="nps-score" data-score="8">8</button>
+                    <button class="nps-score" data-score="9">9</button>
+                    <button class="nps-score" data-score="10">10</button>
+                </div>
+                <div class="nps-labels">
+                    <span>完全不可能</span>
+                    <span>非常可能</span>
+                </div>
+                <div class="nps-feedback-input" id="npsFeedbackInput" style="display: none;">
+                    <textarea id="npsFeedbackText" placeholder="可以告诉我们原因吗？（可选）"></textarea>
+                    <button class="nps-submit" onclick="submitNPSFeedback()">提交反馈</button>
+                </div>
+            </div>
+        </div>
     </div>
 
     <script src="/static/app.js"></script>

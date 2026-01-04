@@ -1,5 +1,75 @@
 // Abstraction AI - Frontend Application (streaming version)
 
+// ============================================
+// Analytics Helper Functions (GA4 + Clarity)
+// ============================================
+
+// Track custom events to GA4
+function trackEvent(eventName, params = {}) {
+    if (typeof gtag === 'function') {
+        gtag('event', eventName, params);
+    }
+    // Also log to console in development
+    console.debug('[Analytics]', eventName, params);
+}
+
+// Get or create anonymous user ID for tracking
+function getAnonymousUserId() {
+    let userId = localStorage.getItem('abstraction_user_id');
+    if (!userId) {
+        userId = 'user_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+        localStorage.setItem('abstraction_user_id', userId);
+    }
+    return userId;
+}
+
+// Track user properties
+function getUserStats() {
+    const stats = JSON.parse(localStorage.getItem('abstraction_stats') || '{}');
+    return {
+        total_generations: stats.total_generations || 0,
+        total_downloads: stats.total_downloads || 0,
+        first_visit: stats.first_visit || null,
+        last_visit: stats.last_visit || null,
+        nps_submitted: stats.nps_submitted || false,
+        feedback_given: stats.feedback_given || false
+    };
+}
+
+function updateUserStats(updates) {
+    const stats = getUserStats();
+    Object.assign(stats, updates);
+    localStorage.setItem('abstraction_stats', JSON.stringify(stats));
+}
+
+// Initialize user tracking on page load
+function initAnalytics() {
+    const stats = getUserStats();
+    const now = new Date().toISOString();
+
+    if (!stats.first_visit) {
+        updateUserStats({ first_visit: now });
+        trackEvent('first_visit', { user_id: getAnonymousUserId() });
+    }
+
+    updateUserStats({ last_visit: now });
+
+    // Track page view with user properties
+    trackEvent('page_view_enhanced', {
+        user_id: getAnonymousUserId(),
+        is_returning: !!stats.first_visit,
+        total_generations: stats.total_generations,
+        referrer: document.referrer || 'direct'
+    });
+}
+
+// Call on page load
+initAnalytics();
+
+// ============================================
+// End Analytics Helper Functions
+// ============================================
+
 // Final documents (used for download, legacy compatibility)
 let generatedDocuments = [];
 
@@ -72,9 +142,18 @@ contextInput.addEventListener('input', () => {
 if (modelToggleButtons && modelToggleButtons.length) {
 	    modelToggleButtons.forEach((btn) => {
 	        btn.addEventListener('click', () => {
+	            const previousModel = selectedModel;
 	            modelToggleButtons.forEach((b) => b.classList.remove('active'));
 	            btn.classList.add('active');
 	            selectedModel = btn.dataset.model || 'gpt-5';
+
+	            // Track model switch
+	            if (previousModel !== selectedModel) {
+	                trackEvent('model_switch', {
+	                    from_model: previousModel,
+	                    to_model: selectedModel
+	                });
+	            }
 	        });
 	    });
 }
@@ -87,12 +166,22 @@ fileInput.addEventListener('change', async (e) => {
     if (files.length === 0) return;
 
     // Add new files to the list
+    const fileTypes = [];
     for (const file of files) {
         // Avoid duplicates
         if (!uploadedFiles.some(f => f.name === file.name && f.size === file.size)) {
             uploadedFiles.push(file);
+            fileTypes.push(file.name.split('.').pop().toLowerCase());
         }
     }
+
+    // Track file upload event
+    trackEvent('file_upload', {
+        file_count: files.length,
+        total_files: uploadedFiles.length,
+        file_types: fileTypes.join(','),
+        total_size_kb: Math.round(uploadedFiles.reduce((sum, f) => sum + f.size, 0) / 1024)
+    });
 
     // Update UI
     renderFileList();
@@ -156,8 +245,19 @@ async function generateDocuments() {
 
 		    if (!context) {
 		        showToast('请输入一些上下文内容', 'error');
+		        trackEvent('generate_attempt_empty');
 		        return;
 		    }
+
+	    // Track generation start
+	    const inputLength = context.length;
+	    trackEvent('generate_start', {
+	        input_length: inputLength,
+	        input_length_bucket: inputLength < 1000 ? 'short' : inputLength < 5000 ? 'medium' : 'long',
+	        file_count: uploadedFiles.length,
+	        model: selectedModel,
+	        project_name_set: !!projectName.value
+	    });
 
 	    // Reset state
 	    isStreaming = true;
@@ -305,12 +405,40 @@ function handleStreamEvent(event) {
 	            generationStatusEl.textContent = `已生成完成 ${docsCompleted} / ${totalDocsExpected} 份文档`;
 	            // Stop timer but keep final time displayed
 	            stopElapsedTimer();
+
+	            // Calculate generation time
+	            const generationTime = generationStartTime ? Math.round((Date.now() - generationStartTime) / 1000) : 0;
+	            const totalContentLength = docStates.reduce((sum, d) => sum + (d.content?.length || 0), 0);
+
+	            // Track generation complete
+	            trackEvent('generate_complete', {
+	                document_count: docsCompleted,
+	                generation_time_seconds: generationTime,
+	                total_content_length: totalContentLength,
+	                model: selectedModel
+	            });
+
+	            // Update user stats
+	            const stats = getUserStats();
+	            updateUserStats({ total_generations: stats.total_generations + 1 });
+
+	            // Show feedback widget
+	            showFeedbackWidget();
+
+	            // Maybe show NPS (after 3+ generations, if not already submitted)
+	            maybeShowNPS();
 	            break;
 	        }
 	        case 'error': {
 	            generationStatusEl.textContent = '生成失败, 请稍后重试';
 	            showToast(event.message || '生成失败', 'error');
 	            clearElapsedTimer();
+
+	            // Track error
+	            trackEvent('generate_error', {
+	                error_message: event.message || 'unknown',
+	                model: selectedModel
+	            });
 	            break;
 	        }
 	        case 'heartbeat': {
@@ -502,6 +630,13 @@ function openDocument(index) {
 	    modalContent.textContent = doc.content || '文档内容正在生成中…';
 	    modal.classList.add('active');
 	    document.body.style.overflow = 'hidden';
+
+	    // Track document view
+	    trackEvent('document_view', {
+	        document_name: doc.name,
+	        document_index: index,
+	        content_length: doc.content?.length || 0
+	    });
 }
 
 // Close modal
@@ -516,6 +651,12 @@ function copyDocument() {
     if (currentDocument) {
         navigator.clipboard.writeText(currentDocument.content);
         showToast('已复制到剪贴板', 'success');
+
+        // Track copy event
+        trackEvent('document_copy', {
+            document_name: currentDocument.name,
+            content_length: currentDocument.content?.length || 0
+        });
     }
 }
 
@@ -530,6 +671,16 @@ function downloadDocument() {
         a.click();
         URL.revokeObjectURL(url);
         showToast('下载已开始', 'success');
+
+        // Track download event
+        trackEvent('document_download', {
+            document_name: currentDocument.name,
+            content_length: currentDocument.content?.length || 0
+        });
+
+        // Update stats
+        const stats = getUserStats();
+        updateUserStats({ total_downloads: stats.total_downloads + 1 });
     }
 }
 
@@ -569,6 +720,17 @@ async function downloadAll() {
 	        generatedDocuments = docStates.map((d) => ({ name: d.name, content: d.content }));
 	    }
 	    if (generatedDocuments.length === 0) return;
+
+    // Track download all event
+    const totalSize = generatedDocuments.reduce((sum, d) => sum + (d.content?.length || 0), 0);
+    trackEvent('download_all', {
+        document_count: generatedDocuments.length,
+        total_size_kb: Math.round(totalSize / 1024)
+    });
+
+    // Update stats
+    const stats = getUserStats();
+    updateUserStats({ total_downloads: stats.total_downloads + generatedDocuments.length });
 
     try {
         const response = await fetch('/api/download-zip', {
@@ -727,5 +889,121 @@ function copyAiPrompt() {
     } else {
         fallbackCopy();
     }
+}
+
+// ============================================
+// Feedback Widget Functions
+// ============================================
+
+function showFeedbackWidget() {
+    const stats = getUserStats();
+    // Don't show if already given feedback this session
+    if (stats.feedback_given) return;
+
+    const widget = document.getElementById('feedbackWidget');
+    if (widget) {
+        setTimeout(() => {
+            widget.style.display = 'flex';
+        }, 2000); // Show after 2 seconds
+    }
+}
+
+function submitFeedback(type) {
+    trackEvent('feedback_submitted', {
+        feedback_type: type,
+        total_generations: getUserStats().total_generations
+    });
+
+    updateUserStats({ feedback_given: true });
+
+    const widget = document.getElementById('feedbackWidget');
+    if (widget) {
+        widget.innerHTML = '<div class="feedback-thanks">感谢你的反馈！ 🎉</div>';
+        setTimeout(() => {
+            widget.style.display = 'none';
+        }, 2000);
+    }
+
+    showToast(type === 'positive' ? '感谢你的支持！' : '感谢反馈，我们会继续改进', 'success');
+}
+
+function dismissFeedback() {
+    const widget = document.getElementById('feedbackWidget');
+    if (widget) {
+        widget.style.display = 'none';
+    }
+    trackEvent('feedback_dismissed');
+}
+
+// ============================================
+// NPS Survey Functions
+// ============================================
+
+let selectedNPSScore = null;
+
+function maybeShowNPS() {
+    const stats = getUserStats();
+
+    // Show NPS after 3+ generations, if not already submitted
+    if (stats.total_generations >= 3 && !stats.nps_submitted) {
+        setTimeout(() => {
+            showNPS();
+        }, 5000); // Show after 5 seconds
+    }
+}
+
+function showNPS() {
+    const modal = document.getElementById('npsModal');
+    if (modal) {
+        modal.style.display = 'flex';
+        trackEvent('nps_shown', {
+            total_generations: getUserStats().total_generations
+        });
+
+        // Add click handlers to score buttons
+        modal.querySelectorAll('.nps-score').forEach(btn => {
+            btn.addEventListener('click', () => {
+                // Remove previous selection
+                modal.querySelectorAll('.nps-score').forEach(b => b.classList.remove('selected'));
+                btn.classList.add('selected');
+                selectedNPSScore = parseInt(btn.dataset.score);
+
+                // Show feedback input
+                document.getElementById('npsFeedbackInput').style.display = 'block';
+
+                trackEvent('nps_score_selected', {
+                    score: selectedNPSScore,
+                    category: selectedNPSScore <= 6 ? 'detractor' : selectedNPSScore <= 8 ? 'passive' : 'promoter'
+                });
+            });
+        });
+    }
+}
+
+function closeNPS() {
+    const modal = document.getElementById('npsModal');
+    if (modal) {
+        modal.style.display = 'none';
+    }
+
+    if (selectedNPSScore === null) {
+        trackEvent('nps_dismissed');
+    }
+}
+
+function submitNPSFeedback() {
+    const feedbackText = document.getElementById('npsFeedbackText')?.value || '';
+
+    trackEvent('nps_submitted', {
+        score: selectedNPSScore,
+        category: selectedNPSScore <= 6 ? 'detractor' : selectedNPSScore <= 8 ? 'passive' : 'promoter',
+        has_feedback: feedbackText.length > 0,
+        feedback_length: feedbackText.length
+    });
+
+    updateUserStats({ nps_submitted: true });
+
+    closeNPS();
+    showToast('感谢你的反馈！', 'success');
 }
 
