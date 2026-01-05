@@ -1,5 +1,10 @@
 """Ultimate Prompt for Context Compilation - Full Version"""
 
+from __future__ import annotations
+
+from dataclasses import dataclass
+from typing import Literal
+
 ULTIMATE_PROMPT = """【使用说明】把本文件整段 Prompt 复制到另一个 AI 对话中；在文末 <<<CONTEXT>>> 位置粘贴你的长对话/会议记录。AI 将一次性按分隔符输出多份完整长文档，信息尽量不丢，非技术读者能看懂，工程师/AI 能直接按文档实现与验收。
 
 ────────────────────────────────────────────────
@@ -238,3 +243,269 @@ DOCUMENT_NAMES = [
     "10_文档矛盾_INCONSISTENCIES.md"
 ]
 
+
+Language = Literal["en", "zh"]
+
+
+def build_document_separators(document_names: list[str]) -> list[str]:
+    return [f"===== DOC:{name} =====" for name in document_names]
+
+
+DOCUMENT_NAMES_ZH = DOCUMENT_NAMES
+DOCUMENT_SEPARATORS_ZH = DOCUMENT_SEPARATORS
+ULTIMATE_PROMPT_ZH = ULTIMATE_PROMPT
+
+DOCUMENT_NAMES_EN = [
+    "00_Product_Overview_For_Everyone.md",
+    "01_Features_and_Rules_For_PM_and_QA.md",
+    "02_Technical_Implementation_For_Engineers.md",
+    "03_Glossary_For_Beginners.md",
+    "04_Tasks_and_Acceptance_For_Execution.md",
+    "05_Decisions_DECISIONS.md",
+    "06_Edge_Cases_EDGE_CASES.md",
+    "07_Quote_Snippets_QUOTE_SNIPPETS.md",
+    "08_Trace_Map_TRACE_MAP.json",
+    "09_Open_Questions_OPEN_QUESTIONS.md",
+    "10_Inconsistencies_INCONSISTENCIES.md",
+]
+
+DOCUMENT_SEPARATORS_EN = build_document_separators(DOCUMENT_NAMES_EN)
+
+ULTIMATE_PROMPT_EN = """[Instructions] Copy this entire prompt into another AI chat. Paste your long conversation / meeting transcript at the end where <<<CONTEXT>>> is. The AI must output ALL documents in one go, strictly separated by the required separators and file names. Preserve as much information as possible. Non-technical readers should understand it, and engineers/AI should be able to implement and validate directly from the docs.
+
+────────────────────────────────────────────────
+Role
+────────────────────────────────────────────────
+You are a "Product Spec Compiler + Teaching-Style Technical Writer + Beginner-Friendly Explainer + Evidence Keeper".
+
+Input: a very long conversation / transcript / brainstorming text (may be messy, repetitive, with reversals).
+Output: a complete set of specification documents as a Single Source of Truth (SSOT) + an evidence pack (decisions, boundaries, quote snippets, trace map). Anyone (human or AI) should be able to understand and build the product using only these documents.
+
+────────────────────────────────────────────────
+Primary Goals (MUST achieve)
+────────────────────────────────────────────────
+1) Preserve information: absorb all facts/constraints/decisions/boundaries/failures/preferences that affect product design and implementation. You may rewrite concisely, but do not drop critical info.
+2) Beginner-friendly: assume the reader is non-technical. Explain terms before using them; the first time a term appears, include a short reminder in parentheses; use simple analogies when helpful.
+3) Engineering-executable: include enough technical detail (architecture, data models, API contracts, examples, error handling, non-functional requirements, deployment and local run steps) so an engineer/AI can implement and self-check.
+4) Traceable evidence: for key rules/requirements/decisions/boundaries, cite sources (quote snippet IDs like Q3). Also output TRACE_MAP.json mapping items ↔ quotes.
+5) No hallucination: uncertain/conflicting parts go into OPEN_QUESTIONS. You may suggest an approach but must label it as "Suggestion / Needs confirmation".
+6) Language: output entirely in English (except proper nouns/code/API examples).
+
+────────────────────────────────────────────────
+Global Style Constraints (strict)
+────────────────────────────────────────────────
+- Prefer structured writing: short paragraphs + lists. Easy to scan and easy for AI to parse.
+- Rule levels: use MUST / SHOULD / MAY. User stories/requirements must include P0/P1/P2 priority.
+- For each feature: Plain-English explanation → Detailed rules (MUST/SHOULD/MAY) → Normal example → Edge cases & errors → Sources (Qx...).
+- For each API: method/path/request example/response example/field explanations/error codes + typical error cases.
+- Data models must be tables: field/type/required/plain meaning/example.
+- Non-functional requirements (performance/reliability/security/privacy/cost/monitoring) must be verifiable statements or levels.
+- Any term’s first appearance includes a short reminder in parentheses; also include a full glossary doc.
+
+────────────────────────────────────────────────
+How to process the input (do this before writing)
+────────────────────────────────────────────────
+1) Quick read: identify goals, constraints, confirmed decisions, major boundaries, real priorities (P0/1/2).
+2) Extract evidence: pick 10–30 high-value quote snippets from the conversation; label Q1..Qn (≤3 sentences each, preserve meaning).
+3) Structured rewrite: produce multiple documents aimed at different audiences using the required templates.
+4) Add trace citations: after each rule/decision/boundary, cite sources (e.g., Source: Q3/Q7).
+5) Generate TRACE_MAP.json mapping requirement/decision/boundary IDs to quotes.
+6) Summarize open questions and inconsistencies into dedicated docs.
+
+────────────────────────────────────────────────
+Output Format (single pass; MUST use these separators and file names EXACTLY)
+────────────────────────────────────────────────
+You must output 11 documents, each preceded by the exact separator line:
+
+===== DOC:00_Product_Overview_For_Everyone.md =====
+...content...
+===== DOC:01_Features_and_Rules_For_PM_and_QA.md =====
+...content...
+... (and so on for all 11)
+
+Use these exact file names and this order:
+00_Product_Overview_For_Everyone.md
+01_Features_and_Rules_For_PM_and_QA.md
+02_Technical_Implementation_For_Engineers.md
+03_Glossary_For_Beginners.md
+04_Tasks_and_Acceptance_For_Execution.md
+05_Decisions_DECISIONS.md
+06_Edge_Cases_EDGE_CASES.md
+07_Quote_Snippets_QUOTE_SNIPPETS.md
+08_Trace_Map_TRACE_MAP.json
+09_Open_Questions_OPEN_QUESTIONS.md
+10_Inconsistencies_INCONSISTENCIES.md
+
+────────────────────────────────────────────────
+Document Templates (follow closely; fill with real content; no placeholders)
+────────────────────────────────────────────────
+
+DOC 00｜00_Product_Overview_For_Everyone.md
+# What this product is (3–7 bullets)
+# Who it is for (personas)
+# Core value proposition
+# Top-level workflow (step-by-step)
+# Key constraints & assumptions (with sources)
+# What is explicitly out-of-scope (with sources)
+
+DOC 01｜01_Features_and_Rules_For_PM_and_QA.md
+# Scope and priorities (P0/P1/P2)
+# Feature list (F1..Fn)
+## Feature F{n}: Name
+- Plain-English explanation
+- Detailed rules
+  - MUST ...
+  - SHOULD ...
+  - MAY ...
+- Normal examples
+- Edge cases & error handling
+- Sources (Qx..)
+# Acceptance criteria / test checklist
+
+DOC 02｜02_Technical_Implementation_For_Engineers.md
+# Architecture overview
+# Components and responsibilities
+# Data model (tables)
+# API contracts
+# Error handling strategy
+# Observability (logs/metrics/traces)
+# Security & privacy
+# Performance & cost
+# Local dev & deployment steps
+
+DOC 03｜03_Glossary_For_Beginners.md
+# Glossary (Term → definition → simple analogy)
+
+DOC 04｜04_Tasks_and_Acceptance_For_Execution.md
+# Milestones (M1..)
+# Task list (T1..)
+## Task T{n}: Name (Milestone)
+- Preconditions
+- Steps (1→2→3 with visible results)
+- Outputs (verifiable)
+# Definition of Done (DoD)
+
+DOC 05｜05_Decisions_DECISIONS.md
+# Confirmed decisions (D1..)
+## Decision D{n}
+- Decision
+- Why
+- Alternatives
+- Impact
+- Date/owner (if available)
+- Sources (Qx..)
+
+DOC 06｜06_Edge_Cases_EDGE_CASES.md
+# Edge cases (E1..)
+## Edge case E{n}
+- Scenario
+- Expected behavior (including fallback/deny/log/alert)
+- Status
+- How to verify
+- Sources (Qx..)
+
+DOC 07｜07_Quote_Snippets_QUOTE_SNIPPETS.md
+# Quote snippets (Q1..Qn)
+## Q{n}
+- Content (≤3 sentences)
+- Links to specific items (e.g., F1.MUST.2 / D3 / E7)
+
+DOC 08｜08_Trace_Map_TRACE_MAP.json
+Output STRICT JSON only (no extra commentary). Example structure:
+{
+  "requirements": [
+    {
+      "id": "F1.MUST.1",
+      "doc": "01_Features_and_Rules_For_PM_and_QA.md",
+      "section": "Feature F1 / MUST rules",
+      "quotes": ["Q3","Q7"]
+    }
+  ],
+  "decisions": [
+    { "id": "D1", "doc": "05_Decisions_DECISIONS.md", "quotes": ["Q2"] }
+  ],
+  "edge_cases": [
+    { "id": "E4", "doc": "06_Edge_Cases_EDGE_CASES.md", "quotes": ["Q10"] }
+  ]
+}
+
+DOC 09｜09_Open_Questions_OPEN_QUESTIONS.md
+# Open questions
+## O{n}: Title
+- Description
+- Current assumption / suggestion (mark as "Suggestion / Needs confirmation")
+- Suggested owner
+- Priority/urgency
+- Sources (Qx..)
+
+DOC 10｜10_Inconsistencies_INCONSISTENCIES.md
+# Found inconsistencies
+## C{n}: Title
+- What conflicts with what
+- Possible cause and recommended resolution path
+- Sources (Qx..)
+(If none, write: "No known inconsistencies. Cross-checked the docs.")
+
+────────────────────────────────────────────────
+Prohibitions & Notes
+────────────────────────────────────────────────
+- Do NOT change the required separators or file names.
+- Do NOT omit Sources (Qx) or TRACE_MAP.json (unless the input is completely unusable).
+- Do NOT use placeholders instead of real rules/examples; if missing, mark as "Needs confirmation" and put into OPEN_QUESTIONS.
+- Do NOT add extra text outside of the 11 documents.
+
+────────────────────────────────────────────────
+Begin processing input (paste raw conversation at <<<CONTEXT>>>)
+────────────────────────────────────────────────
+Please generate all 11 documents now, using the exact separators and file names, in order:
+
+<<<CONTEXT>>>
+"""
+
+DEFAULT_PROJECT_NAME_ZH = "未命名项目"
+DEFAULT_PROJECT_NAME_EN = "Untitled Project"
+
+FULL_OUTPUT_NAME_ZH = "完整输出.md"
+FULL_OUTPUT_NAME_EN = "FULL_OUTPUT.md"
+
+
+@dataclass(frozen=True)
+class PromptBundle:
+    lang: Language
+    ultimate_prompt: str
+    document_names: list[str]
+    document_separators: list[str]
+    default_project_name: str
+    full_output_name: str
+
+
+def normalize_lang(lang: str | None) -> Language:
+    if not lang:
+        return "en"
+    normalized = lang.strip().lower()
+    if normalized in {"zh", "zh-cn", "zh_cn", "cn", "chinese"}:
+        return "zh"
+    if normalized in {"en", "en-us", "en_us", "english"}:
+        return "en"
+    return "en"
+
+
+def get_prompt_bundle(lang: str | None) -> PromptBundle:
+    resolved = normalize_lang(lang)
+    if resolved == "zh":
+        return PromptBundle(
+            lang="zh",
+            ultimate_prompt=ULTIMATE_PROMPT_ZH,
+            document_names=DOCUMENT_NAMES_ZH,
+            document_separators=DOCUMENT_SEPARATORS_ZH,
+            default_project_name=DEFAULT_PROJECT_NAME_ZH,
+            full_output_name=FULL_OUTPUT_NAME_ZH,
+        )
+    return PromptBundle(
+        lang="en",
+        ultimate_prompt=ULTIMATE_PROMPT_EN,
+        document_names=DOCUMENT_NAMES_EN,
+        document_separators=DOCUMENT_SEPARATORS_EN,
+        default_project_name=DEFAULT_PROJECT_NAME_EN,
+        full_output_name=FULL_OUTPUT_NAME_EN,
+    )

@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-Y4QBW4LZ83"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', 'G-Y4QBW4LZ83');
+    </script>
+    <!-- Microsoft Clarity -->
+    <script type="text/javascript">
+      (function(c,l,a,r,i,t,y){
+        c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
+        t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
+        y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
+      })(window, document, "clarity", "script", "CLARITY_PROJECT_ID");
+    </script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Abstraction AI - Context Compiler</title>
+    <script>window.APP_LANG = 'en';</script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+        <div class="app-container">
+            <!-- Header -->
+            <header class="header">
+                <div class="logo">
+                    <i class="fas fa-layer-group"></i>
+                    <span>Abstraction AI</span>
+                </div>
+                <div class="header-subtitle">Turn long conversations into clear, executable product docs</div>
+                <div class="lang-switch">
+                    <a class="lang-switch-link" href="/zh" title="切换到中文">中文</a>
+                </div>
+            </header>
+
+                <!-- Hero Section: Left content + Right input card -->
+                <section class="hero-split">
+                    <!-- Left: Value Proposition -->
+                    <div class="hero-content" id="heroContent">
+                    <h1 class="hero-title">Turn one conversation into 11 spec docs engineers can build from</h1>
+                    <p class="hero-description">
+                        Paste chat logs / meeting notes / any text, or upload files. The AI extracts decisions and constraints and compiles a complete spec pack.
+                    </p>
+
+                    <!-- 3 Key Benefits -->
+                    <ul class="hero-benefits">
+                        <li>
+                            <i class="fas fa-check-circle"></i>
+                            <span>No missed decisions: goals, scope, constraints, edge cases, risks—captured</span>
+                        </li>
+                        <li>
+                            <i class="fas fa-check-circle"></i>
+                            <span>Friendly for humans and AI: consistent structure, ready to implement</span>
+                        </li>
+                        <li>
+                            <i class="fas fa-check-circle"></i>
+                            <span>Preview each doc live and download everything as a ZIP for your repo</span>
+                        </li>
+                    </ul>
+
+                    <!-- 3-Step Process (Minimal) -->
+                    <div class="hero-steps">
+                        <div class="step-item">
+                            <div class="step-number">1</div>
+                            <div class="step-text">Paste / upload raw context</div>
+                        </div>
+                        <div class="step-arrow">→</div>
+                        <div class="step-item">
+                            <div class="step-number">2</div>
+                            <div class="step-text">Generate 11 engineer-ready spec docs</div>
+                        </div>
+                        <div class="step-arrow">→</div>
+                        <div class="step-item">
+                            <div class="step-number">3</div>
+                            <div class="step-text">Give context + docs + prompt to a coding AI</div>
+                        </div>
+                    </div>
+
+                    <!-- How to use with coding AI -->
+                    <div class="hero-ai-usage">
+                        <div class="hero-ai-usage-title">
+                            <i class="fas fa-robot"></i>
+                            <span>How to build with a coding AI?</span>
+                        </div>
+                            <p>
+                                Put the <strong>original context</strong> and these <strong>11 spec documents</strong> into your project repo. Then, on the results page, copy the <strong>implementation prompt</strong> and send it to Cursor, Claude Code, Augment Code, etc.
+                            </p>
+                    </div>
+                </div>
+
+                <!-- Right: Input Card (Glass morphism) -->
+                <div class="hero-input-card" id="heroInputCard">
+                    <div class="input-card-header">
+                        <h3>Get started</h3>
+                        <p>Paste text or upload files</p>
+                    </div>
+
+                    <div class="input-card-body">
+                        <!-- Project Name -->
+                        <div class="form-group">
+                            <label for="projectName">Project name</label>
+                            <input type="text" id="projectName" placeholder="Enter a project name..." value="Untitled Project">
+                        </div>
+
+                        <!-- Text Input -->
+                        <div class="form-group">
+                            <label for="contextInput">Conversation / context</label>
+                            <textarea id="contextInput" placeholder="Paste your long conversation / meeting transcript here (any length is OK)..."></textarea>
+                            <div class="char-count">
+                                <span id="charCount">0</span> characters
+                            </div>
+                        </div>
+
+                        <!-- File Upload -->
+                        <div class="form-group">
+                            <label>Or upload files (multi-select supported)</label>
+                            <label for="fileInput" class="file-upload-btn">
+                                <i class="fas fa-upload"></i>
+                                <span>Choose files</span>
+                            </label>
+                            <input type="file" id="fileInput" accept=".txt,.md,.doc,.docx,.pdf" multiple hidden>
+                            <div id="fileList" class="file-list"></div>
+                        </div>
+
+                        <!-- Model Selection -->
+                        <div class="form-group">
+                            <label>Model</label>
+                            <div class="model-toggle-group">
+                                <button type="button" class="model-toggle active" data-model="gpt-5">
+                                    <span class="model-name">GPT-5</span>
+                                    <span class="model-hint">Better reasoning</span>
+                                </button>
+                                <button type="button" class="model-toggle" data-model="gemini-2.5-pro">
+                                    <span class="model-name">Gemini 2.5 Pro</span>
+                                    <span class="model-hint">Faster response</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- CTA Button -->
+                        <button class="generate-btn" id="generateBtn" onclick="generateDocuments()">
+                            <i class="fas fa-magic"></i>
+                            <span>Generate</span>
+                        </button>
+
+                        <!-- Time Estimate -->
+                        <p class="time-estimate">Usually 1–5 minutes, depending on length and model</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Main Content -->
+            <main class="main-content">
+            <!-- Loading Section (hidden by default) -->
+            <section class="loading-section" id="loadingSection" style="display: none;">
+                <div class="loading-content">
+                    <div class="loading-spinner"></div>
+                    <h3>Compiling documents...</h3>
+                    <p>The AI is analyzing your context and generating 11 spec documents</p>
+                        <p class="loading-tip">Usually 1–5 minutes, depending on length and model</p>
+                </div>
+            </section>
+
+                <!-- Results Section -->
+                <section class="results-section" id="resultsSection" style="display: none;">
+                    <div class="section-header">
+                        <div class="section-header-main">
+                            <div class="section-header-title-row">
+                                <h2><i class="fas fa-file-alt"></i> Generated documents</h2>
+                                <div class="results-actions">
+                                    <button class="action-btn" onclick="downloadAll()">
+                                        <i class="fas fa-download"></i> Download all
+                                    </button>
+                                    <button class="action-btn secondary" onclick="resetForm()">
+                                        <i class="fas fa-redo"></i> Start over
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="results-meta">
+                                <p id="generationStatus" class="generation-status">Ready to generate 11 documents</p>
+                                <span id="elapsedTimer" class="elapsed-timer"></span>
+                                <div class="generation-progress">
+                                    <div class="generation-progress-bar">
+                                        <div id="generationProgressFill" class="generation-progress-fill"></div>
+                                    </div>
+                                    <span id="generationProgressText" class="generation-progress-text"></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- AI Coding Prompt Box (inline on the right) -->
+                        <div class="ai-prompt-box ai-prompt-inline" id="aiPromptBox">
+                            <div class="ai-prompt-header">
+                                <div class="ai-prompt-title">
+                                    <i class="fas fa-robot"></i>
+                                    <span>Next: have a coding AI implement it</span>
+                                </div>
+                                <button class="copy-prompt-btn" onclick="copyAiPrompt()">
+                                    <i class="fas fa-copy"></i> Copy
+                                </button>
+                            </div>
+                            <div class="ai-prompt-guide">
+                                    <p><strong>How to use:</strong> Put the <u>original context</u> and the <u>generated 11 documents</u> into your repo, then send the <u>prompt below</u> to Cursor / Claude Code / Augment Code. It will understand the requirements and implement the system end-to-end.</p>
+                            </div>
+                                <textarea id="aiPromptText" class="ai-prompt-textarea">From now on, without asking me questions or waiting for confirmation, complete this project end-to-end—from understanding to implementation.
+
+Step 1: Understand everything first (use as much effort and compute as needed):
+- Browse all files and subdirectories in this workspace, including all docs—do not miss anything.
+- Understand what each file and document is for, how they relate, and what the project is supposed to do overall.
+- If there are multiple spec/design docs and raw conversation context, synthesize them to infer the real requirements and constraints (do not rely on only one file).
+- If the environment allows and it is safe, you may look up relevant public information to fill gaps and produce a complete solution.
+
+Step 2: After you understand it, implement everything without stopping at a planning-only level:
+- You may summarize the goal and route in a few sentences, then immediately start building—do not wait for my approval.
+- Create/modify files in a sensible order to implement frontend, backend, data, model calls, and anything else required.
+- Prefer isolated environments (e.g., venv or containers) when dependencies are needed; keep it reproducible and avoid polluting global state.
+- Do not only output TODO lists. Provide concrete code, config, commands, and how to run.
+
+Step 3: Keep validating and improving until the project is truly usable:
+- Use requirements, edge cases, and acceptance criteria in the docs to design and run reasonable tests (automated or clear manual steps).
+- When you find conflicts/inconsistencies, resolve them yourself as much as possible; align code and docs, and record your assumptions when needed.
+- When information is missing, make reasonable assumptions, write them down, and keep going—do not stop to ask me whether you should proceed.
+
+Only if you hit hard external blockers (permissions, missing credentials, etc.) should you briefly explain the issue. Otherwise, continue until you believe the project has no obvious problems and meets all known requirements.</textarea>
+                        </div>
+                    </div>
+
+                    <div class="documents-grid" id="documentsGrid"></div>
+            </section>
+        </main>
+
+        <!-- Document Modal -->
+        <div class="modal" id="documentModal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3 id="modalTitle"></h3>
+                    <div class="modal-actions">
+                        <button class="modal-btn" onclick="copyDocument()">
+                            <i class="fas fa-copy"></i> Copy
+                        </button>
+                        <button class="modal-btn" onclick="downloadDocument()">
+                            <i class="fas fa-download"></i> Download
+                        </button>
+                        <button class="modal-close" onclick="closeModal()">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="modal-body">
+                    <pre id="modalContent"></pre>
+                </div>
+            </div>
+        </div>
+
+        <!-- Toast Notification -->
+        <div class="toast" id="toast"></div>
+
+        <!-- Feedback Widget (appears after generation) -->
+        <div class="feedback-widget" id="feedbackWidget" style="display: none;">
+            <div class="feedback-question">Was this output helpful?</div>
+            <div class="feedback-buttons">
+                <button class="feedback-btn feedback-positive" onclick="submitFeedback('positive')">
+                    <i class="fas fa-thumbs-up"></i> Helpful
+                </button>
+                <button class="feedback-btn feedback-negative" onclick="submitFeedback('negative')">
+                    <i class="fas fa-thumbs-down"></i> Not helpful
+                </button>
+            </div>
+            <button class="feedback-dismiss" onclick="dismissFeedback()">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+
+        <!-- NPS Survey Modal -->
+        <div class="nps-modal" id="npsModal" style="display: none;">
+            <div class="nps-content">
+                <button class="nps-close" onclick="closeNPS()">
+                    <i class="fas fa-times"></i>
+                </button>
+                <h3>How likely are you to recommend this tool to a friend?</h3>
+                <div class="nps-scale">
+                    <button class="nps-score" data-score="0">0</button>
+                    <button class="nps-score" data-score="1">1</button>
+                    <button class="nps-score" data-score="2">2</button>
+                    <button class="nps-score" data-score="3">3</button>
+                    <button class="nps-score" data-score="4">4</button>
+                    <button class="nps-score" data-score="5">5</button>
+                    <button class="nps-score" data-score="6">6</button>
+                    <button class="nps-score" data-score="7">7</button>
+                    <button class="nps-score" data-score="8">8</button>
+                    <button class="nps-score" data-score="9">9</button>
+                    <button class="nps-score" data-score="10">10</button>
+                </div>
+                <div class="nps-labels">
+                    <span>Not at all likely</span>
+                    <span>Extremely likely</span>
+                </div>
+                <div class="nps-feedback-input" id="npsFeedbackInput" style="display: none;">
+                    <textarea id="npsFeedbackText" placeholder="Tell us why (optional)"></textarea>
+                    <button class="nps-submit" onclick="submitNPSFeedback()">Submit</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/app.js"></script>
+</body>
+</html>
+

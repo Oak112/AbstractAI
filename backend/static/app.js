@@ -67,6 +67,116 @@ function initAnalytics() {
 initAnalytics();
 
 // ============================================
+// i18n (EN default, ZH optional)
+// ============================================
+
+const APP_LANG = window.APP_LANG === 'zh' ? 'zh' : 'en';
+const DEFAULT_DOC_COUNT = 11;
+
+const I18N = {
+    en: {
+        default_project_name: 'Untitled Project',
+        zip_filename: 'abstractai_output.zip',
+
+        remove: 'Remove',
+        copy: 'Copy',
+        download: 'Download',
+
+        toast_enter_context: 'Please enter some context',
+        toast_copied: 'Copied to clipboard',
+        toast_download_started: 'Download started',
+        toast_zip_download_started: 'ZIP download started',
+        toast_files_download_started: 'Files download started',
+        toast_download_failed: 'Download failed',
+        toast_prompt_copied: 'Prompt copied to clipboard',
+        toast_copy_failed: 'Copy failed. Please copy manually.',
+        toast_feedback_positive: 'Thanks for the support!',
+        toast_feedback_negative: "Thanks—we'll keep improving.",
+        toast_feedback_generic: 'Thanks for your feedback!',
+        feedback_thanks_html: '<div class="feedback-thanks">Thanks for your feedback!</div>',
+
+        status_connecting: 'Connecting to AI service...',
+        status_ready_to_generate: 'Ready to generate {count} documents',
+        status_preparing: 'Prepared to generate {count} documents',
+        status_generating: 'Generating: {name}',
+        status_completed: 'Completed {done} / {total} documents',
+        status_generation_failed_retry: 'Generation failed. Please try again.',
+        error_generation_failed: 'Generation failed',
+        heartbeat_waiting: 'Waiting... ({seconds}s)',
+        file_read_failed: 'Unable to read file contents',
+
+        doc_status_done: 'Done',
+        doc_status_streaming: 'Generating...',
+        doc_status_pending: 'Queued',
+        doc_preview_streaming: 'Content will stream here...',
+        doc_size_empty: 'No content yet',
+        doc_title_suffix_streaming: ' (Generating…)',
+        modal_fallback_title: 'Document',
+        modal_generating: 'This document is still generating...',
+
+        elapsed_seconds: 'Elapsed {seconds}s',
+        elapsed_minutes: 'Elapsed {minutes}m {seconds}s',
+    },
+    zh: {
+        default_project_name: '未命名项目',
+        zip_filename: 'context_compiler_output.zip',
+
+        remove: '移除',
+        copy: '复制',
+        download: '下载',
+
+        toast_enter_context: '请输入一些上下文内容',
+        toast_copied: '已复制到剪贴板',
+        toast_download_started: '下载已开始',
+        toast_zip_download_started: 'ZIP 下载已开始',
+        toast_files_download_started: '文件下载已开始',
+        toast_download_failed: '下载失败',
+        toast_prompt_copied: 'Prompt 已复制到剪贴板',
+        toast_copy_failed: '复制失败，请手动复制',
+        toast_feedback_positive: '感谢你的支持！',
+        toast_feedback_negative: '感谢反馈，我们会继续改进',
+        toast_feedback_generic: '感谢你的反馈！',
+        feedback_thanks_html: '<div class="feedback-thanks">感谢你的反馈！ 🎉</div>',
+
+        status_connecting: '正在连接 AI 服务...',
+        status_ready_to_generate: '准备生成 {count} 份文档',
+        status_preparing: '已准备生成 {count} 份文档',
+        status_generating: '正在生成: {name}',
+        status_completed: '已生成完成 {done} / {total} 份文档',
+        status_generation_failed_retry: '生成失败, 请稍后重试',
+        error_generation_failed: '生成失败',
+        heartbeat_waiting: '等待中... ({seconds}秒)',
+        file_read_failed: '无法读取文件内容',
+
+        doc_status_done: '已完成',
+        doc_status_streaming: '生成中...',
+        doc_status_pending: '等待生成',
+        doc_preview_streaming: '内容将在这里实时显示...',
+        doc_size_empty: '暂无内容',
+        doc_title_suffix_streaming: '（生成中…）',
+        modal_fallback_title: '文档',
+        modal_generating: '文档内容正在生成中…',
+
+        elapsed_seconds: '已用时 {seconds} 秒',
+        elapsed_minutes: '已用时 {minutes} 分 {seconds} 秒',
+    },
+};
+
+function t(key, vars = {}) {
+    const dict = I18N[APP_LANG] || I18N.en;
+    const template = dict[key] || I18N.en[key] || key;
+    return template.replace(/\{(\w+)\}/g, (_, k) => (vars[k] ?? `{${k}}`).toString());
+}
+
+function getDefaultProjectName() {
+    return t('default_project_name');
+}
+
+function getZipFilename() {
+    return t('zip_filename');
+}
+
+// ============================================
 // End Analytics Helper Functions
 // ============================================
 
@@ -199,7 +309,7 @@ function renderFileList() {
     fileList.innerHTML = uploadedFiles.map((file, index) => `
         <div class="file-item">
             <span class="file-item-name"><i class="fas fa-file-alt"></i> ${file.name}</span>
-            <button type="button" class="file-remove-btn" data-index="${index}" title="移除">
+            <button type="button" class="file-remove-btn" data-index="${index}" title="${t('remove')}">
                 <i class="fas fa-times"></i>
             </button>
         </div>
@@ -230,7 +340,7 @@ async function combineFileContents() {
             contents.push(`=== ${file.name} ===\n${text}`);
         } catch (err) {
             console.error(`Error reading ${file.name}:`, err);
-            contents.push(`=== ${file.name} ===\n[无法读取文件内容]`);
+            contents.push(`=== ${file.name} ===\n[${t('file_read_failed')}]`);
         }
     }
 
@@ -241,13 +351,13 @@ async function combineFileContents() {
 
 // Generate documents (streaming via /api/generate-stream)
 async function generateDocuments() {
-	    const context = contextInput.value.trim();
+		    const context = contextInput.value.trim();
 
-		    if (!context) {
-		        showToast('请输入一些上下文内容', 'error');
-		        trackEvent('generate_attempt_empty');
-		        return;
-		    }
+			    if (!context) {
+			        showToast(t('toast_enter_context'), 'error');
+			        trackEvent('generate_attempt_empty');
+			        return;
+			    }
 
 	    // Track generation start
 	    const inputLength = context.length;
@@ -276,11 +386,11 @@ async function generateDocuments() {
 	    heroInputCard.style.display = 'none';
 	    loadingSection.style.display = 'none';
 	    resultsSection.style.display = 'block';
-	    documentsGrid.innerHTML = '';
-	    generationStatusEl.textContent = '正在连接 AI 服务...';
-	    generationProgressFill.style.width = '0%';
-	    generationProgressText.textContent = '';
-	    generateBtn.disabled = true;
+		    documentsGrid.innerHTML = '';
+		    generationStatusEl.textContent = t('status_connecting');
+		    generationProgressFill.style.width = '0%';
+		    generationProgressText.textContent = '';
+		    generateBtn.disabled = true;
 
 	    // Start elapsed timer
 	    clearElapsedTimer();
@@ -292,12 +402,13 @@ async function generateDocuments() {
 	            headers: {
 	                'Content-Type': 'application/json'
 	            },
-	            body: JSON.stringify({
-	                context: context,
-	                project_name: projectName.value || '未命名项目',
-	                model: selectedModel,
-	            })
-	        });
+		            body: JSON.stringify({
+		                context: context,
+		                project_name: projectName.value || getDefaultProjectName(),
+		                model: selectedModel,
+		                lang: APP_LANG,
+		            })
+		        });
 
 	        if (!response.ok || !response.body) {
 	            let errorDetail = '';
@@ -305,8 +416,8 @@ async function generateDocuments() {
 	                const data = await response.json();
 	                errorDetail = data.detail || '';
 	            } catch (e) {}
-	            throw new Error(errorDetail || '生成失败');
-	        }
+		            throw new Error(errorDetail || t('error_generation_failed'));
+		        }
 
 	        const reader = response.body.getReader();
 	        const decoder = new TextDecoder('utf-8');
@@ -340,7 +451,7 @@ async function generateDocuments() {
 	        }
 	        heroInputCard.style.display = 'block';
 	        resultsSection.style.display = 'none';
-	        showToast(`生成失败: ${error.message || error}`, 'error');
+	        showToast(`${t('error_generation_failed')}: ${error.message || error}`, 'error');
 	        clearElapsedTimer();
 	    } finally {
 	        isStreaming = false;
@@ -351,29 +462,29 @@ async function generateDocuments() {
 // Handle streaming events from /api/generate-stream
 function handleStreamEvent(event) {
 	    switch (event.type) {
-	        case 'meta': {
-	            streamDocumentNames = event.document_names || [];
-	            totalDocsExpected = streamDocumentNames.length;
-	            docsCompleted = 0;
+		        case 'meta': {
+		            streamDocumentNames = event.document_names || [];
+		            totalDocsExpected = streamDocumentNames.length;
+		            docsCompleted = 0;
 	            docStates = streamDocumentNames.map((name) => ({
 	                name,
 	                status: 'pending',
 	                content: ''
 	            }));
-	            generationStatusEl.textContent = `已准备生成 ${totalDocsExpected} 份文档`;
-	            updateGenerationProgress();
-	            renderStreamDocuments();
-	            break;
-	        }
-	        case 'doc_started': {
-	            const idx = event.doc_index;
-	            if (docStates[idx]) {
-	                docStates[idx].status = 'streaming';
-	                generationStatusEl.textContent = `正在生成: ${docStates[idx].name}`;
-	                renderStreamDocuments();
-	            }
-	            break;
-	        }
+		            generationStatusEl.textContent = t('status_preparing', { count: totalDocsExpected });
+		            updateGenerationProgress();
+		            renderStreamDocuments();
+		            break;
+		        }
+		        case 'doc_started': {
+		            const idx = event.doc_index;
+		            if (docStates[idx]) {
+		                docStates[idx].status = 'streaming';
+		                generationStatusEl.textContent = t('status_generating', { name: docStates[idx].name });
+		                renderStreamDocuments();
+		            }
+		            break;
+		        }
 	        case 'chunk': {
 	            const idx = event.doc_index;
 	            const delta = event.delta || '';
@@ -402,7 +513,7 @@ function handleStreamEvent(event) {
 	        case 'done': {
 	            // Finalize generatedDocuments for downloadAll / legacy APIs
 	            generatedDocuments = docStates.map((d) => ({ name: d.name, content: d.content }));
-	            generationStatusEl.textContent = `已生成完成 ${docsCompleted} / ${totalDocsExpected} 份文档`;
+	            generationStatusEl.textContent = t('status_completed', { done: docsCompleted, total: totalDocsExpected });
 	            // Stop timer but keep final time displayed
 	            stopElapsedTimer();
 
@@ -429,10 +540,10 @@ function handleStreamEvent(event) {
 	            maybeShowNPS();
 	            break;
 	        }
-	        case 'error': {
-	            generationStatusEl.textContent = '生成失败, 请稍后重试';
-	            showToast(event.message || '生成失败', 'error');
-	            clearElapsedTimer();
+		        case 'error': {
+		            generationStatusEl.textContent = t('status_generation_failed_retry');
+		            showToast(event.message || t('error_generation_failed'), 'error');
+		            clearElapsedTimer();
 
 	            // Track error
 	            trackEvent('generate_error', {
@@ -441,13 +552,13 @@ function handleStreamEvent(event) {
 	            });
 	            break;
 	        }
-	        case 'heartbeat': {
-	            // Keep-alive event from Gemini non-streaming mode
-	            const msg = event.message || `等待中... (${event.elapsed_seconds || 0}秒)`;
-	            generationStatusEl.textContent = msg;
-	            console.debug('Heartbeat:', event);
-	            break;
-	        }
+		        case 'heartbeat': {
+		            // Keep-alive event from Gemini non-streaming mode
+		            const msg = event.message || t('heartbeat_waiting', { seconds: event.elapsed_seconds || 0 });
+		            generationStatusEl.textContent = msg;
+		            console.debug('Heartbeat:', event);
+		            break;
+		        }
 	        default:
 	            console.debug('Unknown stream event', event);
 	    }
@@ -501,12 +612,12 @@ function renderStreamDocuments() {
                 ? 'doc-status-streaming'
                 : 'doc-status-pending';
 
-        const statusLabel =
-            doc.status === 'done'
-                ? '已完成'
-                : doc.status === 'streaming'
-                ? '生成中...'
-                : '等待生成';
+	        const statusLabel =
+	            doc.status === 'done'
+	                ? t('doc_status_done')
+	                : doc.status === 'streaming'
+	                ? t('doc_status_streaming')
+	                : t('doc_status_pending');
 
         const showActions = doc.status === 'done';
 
@@ -555,15 +666,15 @@ function renderStreamDocuments() {
             titleEl.textContent = doc.name;
         }
 
-        const displayPreview = preview || '内容将在这里实时显示...';
-        if (previewEl && previewEl.textContent !== displayPreview) {
-            previewEl.textContent = displayPreview;
-        }
+	        const displayPreview = preview || t('doc_preview_streaming');
+	        if (previewEl && previewEl.textContent !== displayPreview) {
+	            previewEl.textContent = displayPreview;
+	        }
 
-        const displaySize = sizeKb ? sizeKb + ' KB' : '暂无内容';
-        if (sizeEl && sizeEl.textContent !== displaySize) {
-            sizeEl.textContent = displaySize;
-        }
+	        const displaySize = sizeKb ? sizeKb + ' KB' : t('doc_size_empty');
+	        if (sizeEl && sizeEl.textContent !== displaySize) {
+	            sizeEl.textContent = displaySize;
+	        }
 
         if (statusEl) {
             statusEl.className = 'doc-status ' + statusClass;
@@ -575,15 +686,15 @@ function renderStreamDocuments() {
         // Only update actions when status changes to done
         if (actionsEl) {
             const hasButtons = actionsEl.children.length > 0;
-            if (showActions && !hasButtons) {
-                actionsEl.innerHTML = `
-                    <button class="doc-action-btn" title="复制" data-action="copy">
-                        <i class="fas fa-copy"></i>
-                    </button>
-                    <button class="doc-action-btn" title="下载" data-action="download">
-                        <i class="fas fa-download"></i>
-                    </button>
-                `;
+	            if (showActions && !hasButtons) {
+	                actionsEl.innerHTML = `
+	                    <button class="doc-action-btn" title="${t('copy')}" data-action="copy">
+	                        <i class="fas fa-copy"></i>
+	                    </button>
+	                    <button class="doc-action-btn" title="${t('download')}" data-action="download">
+	                        <i class="fas fa-download"></i>
+	                    </button>
+	                `;
                 // Add event listeners for action buttons
                 const copyBtn = actionsEl.querySelector('[data-action="copy"]');
                 const downloadBtn = actionsEl.querySelector('[data-action="download"]');
@@ -623,13 +734,13 @@ function openDocument(index) {
 	    const doc = source[index];
 	    if (!doc) return;
 
-	    currentDocumentIndex = index;
-	    currentDocument = doc;
-	    const titleSuffix = doc.status === 'streaming' ? '（生成中…）' : '';
-	    modalTitle.textContent = (doc.name || '文档') + titleSuffix;
-	    modalContent.textContent = doc.content || '文档内容正在生成中…';
-	    modal.classList.add('active');
-	    document.body.style.overflow = 'hidden';
+		    currentDocumentIndex = index;
+		    currentDocument = doc;
+		    const titleSuffix = doc.status === 'streaming' ? t('doc_title_suffix_streaming') : '';
+		    modalTitle.textContent = (doc.name || t('modal_fallback_title')) + titleSuffix;
+		    modalContent.textContent = doc.content || t('modal_generating');
+		    modal.classList.add('active');
+		    document.body.style.overflow = 'hidden';
 
 	    // Track document view
 	    trackEvent('document_view', {
@@ -650,7 +761,7 @@ function closeModal() {
 function copyDocument() {
     if (currentDocument) {
         navigator.clipboard.writeText(currentDocument.content);
-        showToast('已复制到剪贴板', 'success');
+        showToast(t('toast_copied'), 'success');
 
         // Track copy event
         trackEvent('document_copy', {
@@ -670,7 +781,7 @@ function downloadDocument() {
         a.download = currentDocument.name;
         a.click();
         URL.revokeObjectURL(url);
-        showToast('下载已开始', 'success');
+        showToast(t('toast_download_started'), 'success');
 
         // Track download event
         trackEvent('document_download', {
@@ -692,7 +803,7 @@ function copyDocAtIndex(index, event) {
     const doc = docStates[index];
     if (!doc || doc.status !== 'done' || !doc.content) return;
     navigator.clipboard.writeText(doc.content);
-    showToast('已复制到剪贴板', 'success');
+    showToast(t('toast_copied'), 'success');
 }
 
 // Per-card download action (from results grid)
@@ -710,7 +821,7 @@ function downloadDocAtIndex(index, event) {
     a.download = doc.name;
     a.click();
     URL.revokeObjectURL(url);
-    showToast('下载已开始', 'success');
+    showToast(t('toast_download_started'), 'success');
 }
 
 // Download all documents as ZIP
@@ -741,33 +852,33 @@ async function downloadAll() {
             body: JSON.stringify(generatedDocuments)
         });
 
-        if (response.ok) {
-            const blob = await response.blob();
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = 'context_compiler_output.zip';
-            a.click();
-            URL.revokeObjectURL(url);
-            showToast('ZIP 下载已开始', 'success');
-        } else {
-            // Fallback: download files individually
-            generatedDocuments.forEach(doc => {
+	        if (response.ok) {
+	            const blob = await response.blob();
+	            const url = URL.createObjectURL(blob);
+	            const a = document.createElement('a');
+	            a.href = url;
+	            a.download = getZipFilename();
+	            a.click();
+	            URL.revokeObjectURL(url);
+	            showToast(t('toast_zip_download_started'), 'success');
+	        } else {
+	            // Fallback: download files individually
+	            generatedDocuments.forEach(doc => {
                 const blob = new Blob([doc.content], { type: 'text/plain;charset=utf-8' });
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement('a');
                 a.href = url;
                 a.download = doc.name;
-                a.click();
-                URL.revokeObjectURL(url);
-            });
-            showToast('文件下载已开始', 'success');
-        }
-    } catch (error) {
-        console.error('Download error:', error);
-        showToast('下载失败', 'error');
-    }
-}
+	                a.click();
+	                URL.revokeObjectURL(url);
+	            });
+	            showToast(t('toast_files_download_started'), 'success');
+	        }
+	    } catch (error) {
+	        console.error('Download error:', error);
+	        showToast(t('toast_download_failed'), 'error');
+	    }
+	}
 
 // Reset form
 function resetForm() {
@@ -782,13 +893,13 @@ function resetForm() {
 	    streamDocumentNames = [];
 	    totalDocsExpected = 0;
 	    docsCompleted = 0;
-	    currentDocument = null;
-	    currentDocumentIndex = null;
-	    generationStatusEl.textContent = '准备生成 11 份文档';
-	    generationProgressFill.style.width = '0%';
-	    generationProgressText.textContent = '';
-	    clearElapsedTimer();
-}
+		    currentDocument = null;
+		    currentDocumentIndex = null;
+		    generationStatusEl.textContent = t('status_ready_to_generate', { count: DEFAULT_DOC_COUNT });
+		    generationProgressFill.style.width = '0%';
+		    generationProgressText.textContent = '';
+		    clearElapsedTimer();
+	}
 
 // Show toast notification
 function showToast(message, type = 'info') {
@@ -835,9 +946,9 @@ function updateElapsedTimer() {
     const minutes = Math.floor(elapsed / 60);
     const seconds = elapsed % 60;
     if (minutes > 0) {
-        elapsedTimerEl.textContent = `已用时 ${minutes} 分 ${seconds} 秒`;
+        elapsedTimerEl.textContent = t('elapsed_minutes', { minutes, seconds });
     } else {
-        elapsedTimerEl.textContent = `已用时 ${seconds} 秒`;
+        elapsedTimerEl.textContent = t('elapsed_seconds', { seconds });
     }
 }
 
@@ -869,23 +980,23 @@ function copyAiPrompt() {
         tempTextarea.focus();
         tempTextarea.select();
 
-        try {
-            document.execCommand('copy');
-            showToast('Prompt 已复制到剪贴板', 'success');
-        } catch (err) {
-            showToast('复制失败，请手动复制', 'error');
-        }
+	        try {
+	            document.execCommand('copy');
+	            showToast(t('toast_prompt_copied'), 'success');
+	        } catch (err) {
+	            showToast(t('toast_copy_failed'), 'error');
+	        }
 
         document.body.removeChild(tempTextarea);
     }
 
     // Try modern clipboard API first
-    if (navigator.clipboard && window.isSecureContext) {
-        navigator.clipboard.writeText(text).then(() => {
-            showToast('Prompt 已复制到剪贴板', 'success');
-        }).catch(() => {
-            fallbackCopy();
-        });
+	    if (navigator.clipboard && window.isSecureContext) {
+	        navigator.clipboard.writeText(text).then(() => {
+	            showToast(t('toast_prompt_copied'), 'success');
+	        }).catch(() => {
+	            fallbackCopy();
+	        });
     } else {
         fallbackCopy();
     }
@@ -918,13 +1029,13 @@ function submitFeedback(type) {
 
     const widget = document.getElementById('feedbackWidget');
     if (widget) {
-        widget.innerHTML = '<div class="feedback-thanks">感谢你的反馈！ 🎉</div>';
+        widget.innerHTML = t('feedback_thanks_html');
         setTimeout(() => {
             widget.style.display = 'none';
         }, 2000);
     }
 
-    showToast(type === 'positive' ? '感谢你的支持！' : '感谢反馈，我们会继续改进', 'success');
+    showToast(type === 'positive' ? t('toast_feedback_positive') : t('toast_feedback_negative'), 'success');
 }
 
 function dismissFeedback() {
@@ -1004,6 +1115,5 @@ function submitNPSFeedback() {
     updateUserStats({ nps_submitted: true });
 
     closeNPS();
-    showToast('感谢你的反馈！', 'success');
+    showToast(t('toast_feedback_generic'), 'success');
 }
-

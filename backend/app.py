@@ -20,7 +20,7 @@ from pydantic import BaseModel
 from openai import OpenAI
 from dotenv import load_dotenv
 
-from prompt import ULTIMATE_PROMPT, DOCUMENT_SEPARATORS, DOCUMENT_NAMES
+from prompt import get_prompt_bundle
 
 # Load environment variables
 load_dotenv()
@@ -33,7 +33,7 @@ client = OpenAI(
 
 app = FastAPI(
     title="Abstraction AI",
-    description="将长对话/会议记录编译成一套完整的产品规格文档",
+    description="Compile long conversations into executable product specification documents",
     version="1.0.0"
 )
 
@@ -50,8 +50,9 @@ app.add_middleware(
 class GenerateRequest(BaseModel):
     """Request model for document generation"""
     context: str
-    project_name: Optional[str] = "未命名项目"
+    project_name: Optional[str] = None
     model: Optional[str] = "gpt-5"
+    lang: Optional[str] = "en"
 
 
 class DocumentResponse(BaseModel):
@@ -70,48 +71,75 @@ class GenerateResponse(BaseModel):
 
 
 def parse_documents(raw_text: str) -> list[dict]:
-    """Parse the AI response into individual documents"""
+    """Parse the AI response into individual documents (legacy wrapper)."""
+    return parse_documents_with_bundle(raw_text, lang="en")
+
+
+def parse_documents_with_bundle(raw_text: str, *, lang: str | None) -> list[dict]:
+    bundle = get_prompt_bundle(lang)
     documents = []
-    
-    # Split by document separators
-    for i, separator in enumerate(DOCUMENT_SEPARATORS):
-        start_idx = raw_text.find(separator)
+
+    for i, separator in enumerate(bundle.document_separators):
+        matched_separator = separator
+        start_idx = raw_text.find(matched_separator)
         if start_idx == -1:
-            # Try alternative formats
             alt_separator = separator.replace("===== ", "=====").replace(" =====", "=====")
             start_idx = raw_text.find(alt_separator)
-        
+            if start_idx != -1:
+                matched_separator = alt_separator
+
         if start_idx != -1:
-            # Find the end (next separator or end of text)
             end_idx = len(raw_text)
-            for j in range(i + 1, len(DOCUMENT_SEPARATORS)):
-                next_sep_idx = raw_text.find(DOCUMENT_SEPARATORS[j])
+            for j in range(i + 1, len(bundle.document_separators)):
+                next_sep = bundle.document_separators[j]
+                next_sep_idx = raw_text.find(next_sep)
                 if next_sep_idx == -1:
-                    alt_next = DOCUMENT_SEPARATORS[j].replace("===== ", "=====").replace(" =====", "=====")
+                    alt_next = next_sep.replace("===== ", "=====").replace(" =====", "=====")
                     next_sep_idx = raw_text.find(alt_next)
                 if next_sep_idx != -1:
                     end_idx = next_sep_idx
                     break
-            
-            # Extract content
-            content_start = start_idx + len(separator)
+
+            content_start = start_idx + len(matched_separator)
             content = raw_text[content_start:end_idx].strip()
-            
+
             documents.append({
-                "name": DOCUMENT_NAMES[i],
-                "content": content
+                "name": bundle.document_names[i],
+                "content": content,
             })
-    
+
     return documents
 
 
 @app.get("/")
 async def root():
-    """Serve the main page"""
+    """Serve the main page (default: English)."""
+    static_dir = Path(__file__).parent / "static"
+    en_path = static_dir / "index.en.html"
+    zh_path = static_dir / "index.html"
+    if en_path.exists():
+        return FileResponse(en_path)
+    if zh_path.exists():
+        return FileResponse(zh_path)
+    return {"message": "Abstraction AI API", "status": "running"}
+
+
+@app.get("/en")
+async def root_en():
+    """Serve the English page."""
+    static_path = Path(__file__).parent / "static" / "index.en.html"
+    if static_path.exists():
+        return FileResponse(static_path)
+    return await root()
+
+
+@app.get("/zh")
+async def root_zh():
+    """Serve the Chinese page."""
     static_path = Path(__file__).parent / "static" / "index.html"
     if static_path.exists():
         return FileResponse(static_path)
-    return {"message": "Abstraction AI API", "status": "running"}
+    return await root()
 
 
 @app.get("/health")
@@ -123,18 +151,20 @@ async def health_check():
 @app.post("/api/generate", response_model=GenerateResponse)
 async def generate_documents(request: GenerateRequest):
     """Generate specification documents from context (non-streaming)."""
+    bundle = get_prompt_bundle(request.lang)
     # Allow very short inputs as requested (only reject empty/whitespace)
     if not request.context or not request.context.strip():
         raise HTTPException(
             status_code=400,
-            detail="Context is empty. 请至少输入一些内容。",
+            detail="Context is empty. Please provide some text." if bundle.lang == "en" else "上下文为空，请至少输入一些内容。",
         )
 
     # Build the full prompt
-    full_prompt = ULTIMATE_PROMPT + request.context
+    full_prompt = bundle.ultimate_prompt + request.context
 
     # Determine target model (default to gpt-5, allow gemini-2.5-pro)
     model_name = (request.model or "gpt-5").strip()
+    project_name = (request.project_name or "").strip() or bundle.default_project_name
 
     try:
         # Call BuilderSpace API
@@ -150,18 +180,18 @@ async def generate_documents(request: GenerateRequest):
         raw_response = response.choices[0].message.content
 
         # Parse documents from response
-        documents = parse_documents(raw_response)
+        documents = parse_documents_with_bundle(raw_response, lang=bundle.lang)
 
         if not documents:
             # If parsing failed, return raw response as a single document
             documents = [{
-                "name": "完整输出.md",
+                "name": bundle.full_output_name,
                 "content": raw_response,
             }]
 
         return GenerateResponse(
             success=True,
-            project_name=request.project_name,
+            project_name=project_name,
             documents=[DocumentResponse(**doc) for doc in documents],
             generated_at=datetime.now().isoformat(),
             raw_response=raw_response if len(documents) < 5 else None,
@@ -187,14 +217,16 @@ def generate_documents_stream(request: GenerateRequest):
     - error:          {"type": "error", "message"}
     """
 
+    bundle = get_prompt_bundle(request.lang)
+
     if not request.context or not request.context.strip():
         raise HTTPException(
             status_code=400,
-            detail="Context is empty. 请至少输入一些内容。",
+            detail="Context is empty. Please provide some text." if bundle.lang == "en" else "上下文为空，请至少输入一些内容。",
         )
 
-    project_name = request.project_name or "未命名项目"
-    full_prompt = ULTIMATE_PROMPT + request.context
+    project_name = (request.project_name or "").strip() or bundle.default_project_name
+    full_prompt = bundle.ultimate_prompt + request.context
 
     # Determine target model (default to gpt-5, allow gemini-2.5-pro)
     model_name = (request.model or "gpt-5").strip()
@@ -243,7 +275,7 @@ def generate_documents_stream(request: GenerateRequest):
             meta_event = {
                 "type": "meta",
                 "project_name": project_name,
-                "document_names": DOCUMENT_NAMES,
+                "document_names": bundle.document_names,
                 "generated_at": datetime.now().isoformat(),
             }
             yield json.dumps(meta_event, ensure_ascii=False) + "\n"
@@ -267,19 +299,19 @@ def generate_documents_stream(request: GenerateRequest):
                     heartbeat_event = {
                         "type": "heartbeat",
                         "elapsed_seconds": elapsed + heartbeat_interval,
-                        "message": "Gemini 正在思考中，请稍候..."
+                        "message": "Gemini is thinking… please wait." if bundle.lang == "en" else "Gemini 正在思考中，请稍候..."
                     }
                     yield json.dumps(heartbeat_event, ensure_ascii=False) + "\n"
                     elapsed += heartbeat_interval
             else:
                 # Loop ended without break - either timeout or thread died
                 if elapsed >= max_wait_time:
-                    raise Exception("Gemini API 响应超时，请稍后重试")
+                    raise Exception("Gemini API timed out. Please try again." if bundle.lang == "en" else "Gemini API 响应超时，请稍后重试")
                 # Try to get result one more time
                 try:
                     result = result_queue.get(timeout=1)
                 except queue.Empty:
-                    raise Exception("Gemini API 调用失败")
+                    raise Exception("Gemini API call failed." if bundle.lang == "en" else "Gemini API 调用失败")
 
             # Process result
             status, data = result
@@ -289,9 +321,9 @@ def generate_documents_stream(request: GenerateRequest):
             raw_text = data
 
             # Parse documents from raw response
-            documents = parse_documents(raw_text)
+            documents = parse_documents_with_bundle(raw_text, lang=bundle.lang)
             if not documents:
-                documents = [{"name": "完整输出.md", "content": raw_text}]
+                documents = [{"name": bundle.full_output_name, "content": raw_text}]
 
             # Emit events for each document
             for idx, doc in enumerate(documents):
@@ -311,7 +343,7 @@ def generate_documents_stream(request: GenerateRequest):
             meta_event = {
                 "type": "meta",
                 "project_name": project_name,
-                "document_names": DOCUMENT_NAMES,
+                "document_names": bundle.document_names,
                 "generated_at": datetime.now().isoformat(),
             }
             yield json.dumps(meta_event, ensure_ascii=False) + "\n"
@@ -343,7 +375,7 @@ def generate_documents_stream(request: GenerateRequest):
 
             buffer = ""
             current_doc_index = None
-            max_sep_len = max(len(s) for s in DOCUMENT_SEPARATORS)
+            max_sep_len = max(len(s) for s in bundle.document_separators)
             last_chunk_time = time.time()
             heartbeat_interval = 10  # Send heartbeat every 10 seconds of no data
             total_elapsed = 0
@@ -374,7 +406,7 @@ def generate_documents_stream(request: GenerateRequest):
                     # Parse and emit document chunks
                     while True:
                         if current_doc_index is None:
-                            first_sep = DOCUMENT_SEPARATORS[0]
+                            first_sep = bundle.document_separators[0]
                             sep_idx = buffer.find(first_sep)
                             if sep_idx == -1:
                                 if len(buffer) > 4000:
@@ -394,8 +426,8 @@ def generate_documents_stream(request: GenerateRequest):
 
                         next_index = current_doc_index + 1
                         next_sep_idx = -1
-                        if next_index < len(DOCUMENT_SEPARATORS):
-                            next_sep = DOCUMENT_SEPARATORS[next_index]
+                        if next_index < len(bundle.document_separators):
+                            next_sep = bundle.document_separators[next_index]
                             next_sep_idx = buffer.find(next_sep)
 
                         if next_sep_idx == -1:
@@ -412,7 +444,7 @@ def generate_documents_stream(request: GenerateRequest):
                             yield emit_chunk(current_doc_index, content)
                         yield emit_doc_complete(current_doc_index)
 
-                        buffer = buffer[next_sep_idx + len(DOCUMENT_SEPARATORS[next_index]):]
+                        buffer = buffer[next_sep_idx + len(bundle.document_separators[next_index]):]
                         current_doc_index = next_index
                         yield emit_doc_started(current_doc_index)
 
@@ -420,11 +452,11 @@ def generate_documents_stream(request: GenerateRequest):
                     # No chunk received within heartbeat_interval, send heartbeat
                     total_elapsed += heartbeat_interval
                     if total_elapsed >= max_wait:
-                        raise Exception("GPT API 响应超时，请稍后重试")
+                        raise Exception("GPT API timed out. Please try again." if bundle.lang == "en" else "GPT API 响应超时，请稍后重试")
                     heartbeat_event = {
                         "type": "heartbeat",
                         "elapsed_seconds": total_elapsed,
-                        "message": "GPT 正在思考中，请稍候..."
+                        "message": "GPT is thinking… please wait." if bundle.lang == "en" else "GPT 正在思考中，请稍候..."
                     }
                     yield json.dumps(heartbeat_event, ensure_ascii=False) + "\n"
                     continue
@@ -458,8 +490,9 @@ def generate_documents_stream(request: GenerateRequest):
 @app.post("/api/generate-from-file")
 async def generate_from_file(
     file: UploadFile = File(...),
-    project_name: str = Form(default="未命名项目"),
+    project_name: str = Form(default=""),
     model: str = Form(default="gpt-5"),
+    lang: str = Form(default="en"),
 ):
     """Generate documents from uploaded file"""
     content = await file.read()
@@ -469,8 +502,12 @@ async def generate_from_file(
         try:
             text = content.decode("gbk")
         except:
-            raise HTTPException(status_code=400, detail="Could not decode file.")
-    request = GenerateRequest(context=text, project_name=project_name, model=model)
+            bundle = get_prompt_bundle(lang)
+            raise HTTPException(
+                status_code=400,
+                detail="Could not decode file." if bundle.lang == "en" else "文件解码失败，请上传 UTF-8 或 GBK 编码的文本文件。",
+            )
+    request = GenerateRequest(context=text, project_name=project_name, model=model, lang=lang)
     return await generate_documents(request)
 
 
@@ -498,4 +535,3 @@ if static_dir.exists():
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
-
